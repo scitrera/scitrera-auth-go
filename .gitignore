@@ -1,0 +1,11 @@
+/web/node_modules/
+/web/test-results/
+/web/playwright-report/
+/internal/adminui/dist/*
+!/internal/adminui/dist/README.txt
+/dist/
+/.local/
+/.source-revision
+.env
+*.log
+*.tsbuildinfo

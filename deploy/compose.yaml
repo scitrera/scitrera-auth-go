@@ -1,0 +1,39 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+name: scitrera-auth
+services:
+  postgres:
+    image: postgres:17.11-alpine@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73
+    environment:
+      POSTGRES_DB: auth
+      POSTGRES_USER: auth
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run deploy/setup.sh first}
+    volumes: [auth-db:/var/lib/postgresql/data]
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U auth -d auth"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+  auth:
+    build: ..
+    image: scitrera-auth-go:0.1.0-rc.1
+    user: "${AUTH_LOCAL_UID:-1000}:${AUTH_LOCAL_GID:-1000}"
+    depends_on:
+      postgres: {condition: service_healthy}
+    ports: ["127.0.0.1:8080:8080", "127.0.0.1:8082:8082"]
+    volumes: ["../.local:/run/auth:ro"]
+    env_file:
+      - path: ../.local/oauth.env
+        required: false
+    environment:
+      SCITRERA_MT_DB_URL: postgres://auth:${POSTGRES_PASSWORD}@postgres:5432/auth?sslmode=disable
+      AUTH_PROXY_MODE: verify
+      AUTH_PROXY_LISTEN_ADDR: ":8080"
+      AUTH_PROXY_TOKEN_HMAC_KEY: ${AUTH_PROXY_TOKEN_HMAC_KEY:?Run deploy/setup.sh first}
+      SCITRERA_AUTH_ADMIN_ADDR: ":8082"
+      SCITRERA_AUTH_ADMIN_ORIGIN: http://127.0.0.1:8082
+      SCITRERA_AUTH_ADMIN_TOKEN_FILE: /run/auth/operators.json
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+volumes:
+  auth-db:

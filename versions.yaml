@@ -1,0 +1,48 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# Canonical product version. Run make versions && make ci after editing.
+scitrera-auth-go: 0.1.0-rc.1
+
+project_rules:
+  scitrera-auth-go:
+    - type: gomod
+      path: go.mod
+    - type: go_version
+      path: cmd/scitrera-auth-proxy/commands.go
+    - type: package
+      path: web/package.json
+
+go_toolchain:
+  go: "1.25.14"
+
+ci:
+  test_branches: [main]
+  push_branches: [main]
+  repo_tools_source: scitrera-repo-tools==0.1.30
+  check_generated_ci: true
+  only_workflows: [version-check, test-go, test-npm]
+  github_release: false
+  go:
+    lint: none
+    enable_govulncheck: false
+    test_args: -race -count=1 -timeout=10m
+    env:
+      GOWORK: "off"
+      GOTOOLCHAIN: local
+      AUTH_TEST_POSTGRES_DSN: postgres://auth:local-ci-only@127.0.0.1:5432/auth?sslmode=disable
+    services:
+      postgres:
+        image: postgres:17.11-alpine@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73
+        env:
+          POSTGRES_USER: auth
+          POSTGRES_PASSWORD: local-ci-only
+          POSTGRES_DB: auth
+        ports: [5432:5432]
+        options: --health-cmd "pg_isready -U auth -d auth" --health-interval 2s --health-retries 30
+    setup_steps:
+      - name: Check Go formatting
+        run: test -z "$(gofmt -l cmd internal)"
+  npm:
+    node_version: "24.13.0"
+    cache: true
+    build: true
+    lint: none # npm run build includes typecheck.

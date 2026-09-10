@@ -1,0 +1,16 @@
+Scitrera Auth
+Copyright (c) 2026 Scitrera LLC.
+
+First-party source is licensed under AGPL-3.0-only.
+The Aether library and adapted proxy schema remain Apache-2.0.
+Third-party code, fonts, and runtime dependencies retain their original licenses.
+See LICENSE, LICENSES/, and THIRD_PARTY_NOTICES.md.
+
+The dashboard adapts Scitrera's superadmin design tokens, Button, Input, Textarea,
+Card components, utility conventions, and tenant auth form behavior. Those
+Scitrera contributions are released here under AGPL-3.0-only. The UI follows
+shadcn/ui and Radix component conventions; their MIT licenses are retained.
+
+Google and Microsoft names and logos identify their respective sign-in providers.
+No affiliation or endorsement is implied. The default login page loads no remote
+Scitrera logo or production asset.

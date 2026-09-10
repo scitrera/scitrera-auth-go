@@ -1,0 +1,65 @@
+name: Build and integration
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_call:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17.11-alpine@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73
+        env:
+          POSTGRES_USER: auth
+          POSTGRES_PASSWORD: local-ci-only
+          POSTGRES_DB: auth
+        ports: [5432:5432]
+        options: --health-cmd "pg_isready -U auth -d auth" --health-interval 2s --health-retries 30
+    env:
+      GOWORK: "off"
+      AUTH_TEST_POSTGRES_DSN: postgres://auth:local-ci-only@127.0.0.1:5432/auth?sslmode=disable
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version: 1.25.14
+          cache: true
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24.13.0
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - uses: astral-sh/setup-uv@v10.0.1
+      - name: Install build tools
+        run: uv tool install scitrera-repo-tools==0.1.30
+      # Unit/race tests and vet are managed by repo-tools' generated workflows.
+      - run: make build
+      - name: Browser workflows against Go and PostgreSQL
+        env:
+          SCITRERA_MT_DB_URL: postgres://auth:local-ci-only@127.0.0.1:5432/auth?sslmode=disable
+          AUTH_PROXY_MODE: verify
+          AUTH_PROXY_LISTEN_ADDR: 127.0.0.1:9080
+          SCITRERA_AUTH_ADMIN_ADDR: 127.0.0.1:9082
+          SCITRERA_AUTH_ADMIN_ORIGIN: http://127.0.0.1:9082
+        run: |
+          mkdir -p .local
+          dist/scitrera-auth-proxy migrate
+          dist/scitrera-auth-proxy bootstrap --token-file .local/operators.json --operator operator
+          export SCITRERA_AUTH_ADMIN_TOKEN_FILE="$PWD/.local/operators.json"
+          export AUTH_BROWSER_TOKEN_FILE="$SCITRERA_AUTH_ADMIN_TOKEN_FILE"
+          dist/scitrera-auth-proxy > .local/service.log 2>&1 &
+          service_pid=$!
+          trap 'kill "$service_pid" || true' EXIT
+          for _ in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:9080/healthz && break
+            sleep 1
+          done
+          cd web
+          npx playwright install --with-deps chromium
+          npm run test:browser
+      - name: Standalone container
+        run: make container

@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: AGPL-3.0-only
 """Check the standalone release's source and version boundaries."""
+import argparse
 import json
 import re
 import tarfile
 from pathlib import Path
 
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--require-archive', action='store_true',
+                    help='Fail if the generated corresponding-source archive is missing')
+args = parser.parse_args()
 root = Path(__file__).resolve().parent.parent
 version = json.loads((root / 'web/package.json').read_text())['version']
 assert (root / 'versions.yaml').is_file()
@@ -26,11 +31,13 @@ for directory in ['cmd', 'internal', 'migrations', 'web/src', 'deploy']:
 for required in ['LICENSE', 'NOTICE', 'THIRD_PARTY_NOTICES.md', 'LICENSES/Apache-2.0.txt', 'LICENSES/shadcn-ui-MIT.txt', 'docs/provenance.md']:
     assert (root / required).is_file(), f'Missing {required}'
 archive = root / 'internal/adminui/dist/source.tar.gz'
+if args.require_archive and not archive.is_file():
+    parser.exit(1, 'Missing generated corresponding-source archive: internal/adminui/dist/source.tar.gz\n')
 if archive.exists():
     with tarfile.open(archive, 'r:gz') as source:
         for member in source.getmembers():
             path = Path(member.name)
             assert member.isfile() and not path.is_absolute() and '..' not in path.parts, f'Unsafe archive entry: {member.name}'
-            assert not set(path.parts) & {'.git', '.local', '.omc', '.omo', '.codex', '.agents', 'node_modules', 'test-results', 'playwright-report'}, f'Incidental archive entry: {member.name}'
+            assert not set(path.parts) & {'.git', '.local', '.omc', '.omo', '.codex', '.agents', 'node_modules', 'test-results', 'playwright-report', '__pycache__'}, f'Incidental archive entry: {member.name}'
             assert not path.name.startswith('.env') and path.suffix not in {'.env', '.pem', '.key', '.log'}, f'Private archive entry: {member.name}'
 print(f'Release boundaries and version {version}: PASS')

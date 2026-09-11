@@ -1,0 +1,92 @@
+name: Release
+on:
+  push:
+    tags: ['v*.*.*']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  metadata:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.release.outputs.version }}
+      publish: ${{ steps.release.outputs.publish }}
+      prerelease: ${{ steps.release.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.0.1
+        with:
+          cache-dependency-glob: versions.yaml
+      - name: Verify tag and publication setting
+        id: release
+        run: uv run --no-project --with scitrera-repo-tools==0.1.30 python scripts/release_metadata.py
+  go:
+    needs: metadata
+    uses: ./.github/workflows/test-go.yml
+  npm:
+    needs: metadata
+    uses: ./.github/workflows/test-npm.yml
+  integration:
+    needs: metadata
+    uses: ./.github/workflows/ci.yml
+  artifacts:
+    needs: [go, npm, integration]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version: 1.25.14
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24.13.0
+      - uses: astral-sh/setup-uv@v10.0.1
+        with:
+          cache-dependency-glob: versions.yaml
+      - name: Install build tools
+        run: uv tool install scitrera-repo-tools==0.1.30
+      - name: Prepare versioned Linux binaries and source
+        run: make artifacts
+      - uses: actions/upload-artifact@v7
+        with:
+          name: scitrera-auth-artifacts
+          path: |
+            dist/scitrera-auth-proxy_*
+            dist/scitrera-auth-go_*_source.tar.gz
+            dist/SHA256SUMS
+          if-no-files-found: error
+  container:
+    needs: [metadata, artifacts]
+    if: github.event_name == 'push' && github.ref_type == 'tag'
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/publish-container.yml
+  github-release:
+    needs: [metadata, artifacts, container]
+    if: github.event_name == 'push' && github.ref_type == 'tag' && needs.metadata.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: scitrera-auth-artifacts
+          path: dist/
+      - name: Verify artifact checksums
+        working-directory: dist
+        run: sha256sum --check SHA256SUMS
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          name: Scitrera Auth v${{ needs.metadata.outputs.version }}
+          generate_release_notes: true
+          prerelease: ${{ needs.metadata.outputs.prerelease == 'true' }}
+          fail_on_unmatched_files: true
+          files: |
+            dist/scitrera-auth-proxy_*
+            dist/scitrera-auth-go_*_source.tar.gz
+            dist/SHA256SUMS

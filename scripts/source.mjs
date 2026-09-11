@@ -11,7 +11,7 @@ const dist = resolve(root, 'internal/adminui/dist');
 mkdirSync(dist, { recursive: true });
 writeFileSync(resolve(dist, 'README.txt'), 'Generated dashboard assets are prepared by make build. Go-only builds serve the preparation page until then.\n');
 const roots = ['cmd','internal','migrations','web','deploy','scripts','docs','.github','LICENSES','go.mod','go.sum','LICENSE','NOTICE','THIRD_PARTY_NOTICES.md','README.md','CONTRIBUTING.md','CLA.md','SECURITY.md','versions.yaml','Dockerfile','Makefile','.gitignore','.gitattributes','.dockerignore'];
-const excluded = new Set(['node_modules','test-results','playwright-report','.omc','.omo','.codex','.agents','.local']);
+const excluded = new Set(['node_modules','test-results','playwright-report','__pycache__','.omc','.omo','.codex','.agents','.local']);
 const files = [];
 function collect(path) {
   if (!existsSync(path)) return;

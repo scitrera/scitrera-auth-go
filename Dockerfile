@@ -18,7 +18,7 @@ RUN go build -buildvcs=false -trimpath -ldflags "-s -w -X main.revision=$(cat .s
 
 FROM alpine:3.23@sha256:fd791d74b68913cbb027c6546007b3f0d3bc45125f797758156952bc2d6daf40
 # Generated version mirror; edit versions.yaml and run make versions.
-ARG VERSION=0.1.0-rc.1
+ARG VERSION=0.1.1
 ARG REVISION=local-review
 LABEL org.opencontainers.image.title="Scitrera Auth" \
       org.opencontainers.image.source="https://github.com/scitrera/scitrera-auth-go" \

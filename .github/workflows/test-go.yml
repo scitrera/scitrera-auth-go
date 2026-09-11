@@ -64,3 +64,56 @@ jobs:
       - name: go test
         run: go test -race -count=1 -timeout=10m ./...
         working-directory: .
+  security-scitrera-auth-go:
+    name: govulncheck scitrera-auth-go
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version: '1.25.14'
+          cache-dependency-path: ./go.sum
+
+      - name: Install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@v1.3.0
+
+      - name: Run govulncheck
+        working-directory: .
+        env:
+          IGNORED_ADVISORIES: ""
+        run: |
+          set -uo pipefail
+          report="$RUNNER_TEMP/govulncheck-scitrera-auth-go.json"
+          # Exit status is non-zero when anything is found; the JSON is what we
+          # judge on, so do not let `set -e` stop us before reading it.
+          govulncheck -format json ./... > "$report"
+          status=$?
+          if [ ! -s "$report" ]; then
+            echo "::error::govulncheck produced no output (exit $status)"
+            exit 1
+          fi
+
+          # A finding with a function in its trace is reachable from this module.
+          called=$(jq -r 'select(has("finding")) | .finding
+                          | select((.trace[0].function? // null) != null) | .osv'                      "$report" | sort -u)
+
+          fail=0
+          for vuln in $called; do
+            if printf '%s\n' $IGNORED_ADVISORIES | grep -qx "$vuln"; then
+              echo "::notice::$vuln reachable but allow-listed (see ci.go.govulncheck_ignore)"
+            else
+              echo "::error::$vuln is reachable and not allow-listed — see https://pkg.go.dev/vuln/$vuln"
+              fail=1
+            fi
+          done
+
+          # An allow-list entry that no longer matches anything is stale: the
+          # dependency was fixed or dropped, and the waiver should go with it.
+          for vuln in $IGNORED_ADVISORIES; do
+            if ! printf '%s\n' $called | grep -qx "$vuln"; then
+              echo "::warning::$vuln is allow-listed but no longer reachable; drop it from ci.go.govulncheck_ignore"
+            fi
+          done
+
+          [ "$fail" = 0 ]

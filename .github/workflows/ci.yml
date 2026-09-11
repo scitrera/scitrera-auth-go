@@ -36,6 +36,8 @@ jobs:
       - uses: astral-sh/setup-uv@v10.0.1
       - name: Install build tools
         run: uv tool install scitrera-repo-tools==0.1.30
+      - name: Test release gates
+        run: uv run --no-project --with scitrera-repo-tools==0.1.30 python -m unittest discover -s scripts -p 'test_*.py'
       # Unit/race tests and vet are managed by repo-tools' generated workflows.
       - run: make build
       - name: Browser workflows against Go and PostgreSQL

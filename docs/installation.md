@@ -1,5 +1,21 @@
 # Installation
 
+## Container images
+
+Version-tag releases publish `ghcr.io/scitrera/scitrera-auth-go` with native
+`linux/amd64` and `linux/arm64` images under a shared multi-architecture tag.
+Docker selects the image matching the host architecture:
+
+```sh
+docker pull ghcr.io/scitrera/scitrera-auth-go:0.1.1
+docker run --rm ghcr.io/scitrera/scitrera-auth-go:0.1.1 version
+```
+
+Use the same environment settings and private operator credential mount described
+below and in `deploy/compose.yaml` when running the service. The bundled Compose
+quick start builds its image locally; published images can be used in deployments
+that do not need a local source build.
+
 ## Manual installation
 
 Use PostgreSQL 16+ with an empty dedicated database, or a complete compatible
@@ -128,7 +144,7 @@ membership; an existing enabled user gains only the missing membership. Public
 OAuth callback/session creation alone does not enroll. Blank Google hosted-domain
 options always require a manually added member. See [admission](admission.md).
 
-When upgrading the earlier review candidate, domain-only access stops until the
+When upgrading from the original domain-only admission behavior, access stops until the
 user has a membership or the tenant explicitly enables auto-add. This does not
 change stored domain associations or existing memberships. The existing migration
 version remains valid; no deployment-wide enrollment switch is needed.

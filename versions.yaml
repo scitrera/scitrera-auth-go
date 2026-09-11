@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 # Canonical product version. Run make versions && make ci after editing.
-scitrera-auth-go: 0.1.0-rc.1
+scitrera-auth-go: 0.1.1
 
 project_rules:
   scitrera-auth-go:
@@ -19,11 +19,15 @@ ci:
   push_branches: [main]
   repo_tools_source: scitrera-repo-tools==0.1.30
   check_generated_ci: true
+  # release.yml consumes github_release and builds the embedded UI/source first.
+  # make ci wraps repo-tools' Docker jobs as a reusable publish-container workflow
+  # so container publication waits for all of release.yml's checks.
   only_workflows: [version-check, test-go, test-npm]
-  github_release: false
+  github_release: true
   go:
     lint: none
-    enable_govulncheck: false
+    enable_govulncheck: true
+    govulncheck_version: v1.3.0
     test_args: -race -count=1 -timeout=10m
     env:
       GOWORK: "off"
@@ -46,3 +50,22 @@ ci:
     cache: true
     build: true
     lint: none # npm run build includes typecheck.
+  docker:
+    default_platforms: [linux/amd64, linux/arm64]
+    platform_runners:
+      linux/amd64: ubuntu-latest
+      linux/arm64: ubuntu-24.04-arm
+    enable_workflow_dispatch_version: false
+    test_prereqs: [] # release.yml gates the reusable workflow on all tests.
+
+docker:
+  ghcr: scitrera
+  images:
+    scitrera-auth-go:
+      context: .
+      dockerfile: Dockerfile
+      version_from: scitrera-auth-go
+      build_strategy: native
+      build_args:
+        VERSION: ${image_version}
+        REVISION: ${{ github.sha }}

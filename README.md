@@ -1,12 +1,10 @@
 # Scitrera Auth
 
-A standalone Go authentication proxy and operator dashboard for tenant access.
-It combines Aether's Apache-licensed OAuth/proxy library with a PostgreSQL tenant
-registry and a small React configuration interface. No Python backend is required.
-
-This is a **release candidate**, prepared for publication review.
-The repository is `github.com/scitrera/scitrera-auth-go`; [versions.yaml](versions.yaml)
-defines the candidate version and shared CI configuration.
+Scitrera Auth is a standalone Go authentication proxy and operator dashboard for
+tenant access. It supports Google Workspace and Microsoft Entra sign-in, tenant
+admission policies, and user membership management. It combines Aether's
+Apache-licensed OAuth/proxy library with a PostgreSQL tenant registry and an
+embedded React dashboard. No Python backend is required.
 
 The dashboard manages tenants, presentation metadata, domain associations,
 provider allowlists and claim checks, users, memberships, and default tenants.
@@ -43,12 +41,21 @@ docker compose --env-file deploy/.env -f deploy/compose.yaml down
 
 `down` retains the database volume. The setup publishes only loopback ports.
 Remote use requires a private network and TLS termination for the admin origin.
+For prebuilt multi-architecture images from GHCR, see
+[container images](docs/installation.md#container-images).
+
+The binary disables administration by default; this Compose setup enables it on
+port 8082. Set `SCITRERA_AUTH_ADMIN_ADDR` to a listen address to enable both the
+dashboard and admin API, or leave it unset/empty to disable them. Enabling admin
+also requires `SCITRERA_AUTH_ADMIN_ORIGIN` and `SCITRERA_AUTH_ADMIN_TOKEN_FILE`.
+With Compose, override the service's `SCITRERA_AUTH_ADMIN_ADDR` value directly
+and recreate the container; its default value is set in `deploy/compose.yaml`.
 
 ## Build from source
 
-Use **Go 1.25.14**, Node 24.13.0, npm, GNU tar, Make, and Python 3.11+ with
+Use **Go 1.25.14**, Node 24.13.0, npm, GNU tar, Make, uv, and Python 3.11+ with
 [scitrera-repo-tools](https://github.com/scitrera/repo-tools) 0.1.30. Install the
-build tooling with uv (or `pip install scitrera-repo-tools==0.1.30`):
+build tooling with uv:
 
 ```sh
 uv tool install scitrera-repo-tools==0.1.30
@@ -101,8 +108,17 @@ See [operations](docs/operations.md) for database outages and multiple replicas.
 `make versions` synchronizes version declarations and build metadata from
 `versions.yaml`; `make ci` regenerates the shared workflows. `make check` checks
 for version/workflow drift and runs Go race tests, vet, frontend unit
-tests/typecheck, and release boundary checks. Database tests require the explicit disposable DSN documented in
-the testing guide; browser testing runs against the real service.
+tests/typecheck, and release boundary checks. Database tests require the explicit
+disposable DSN documented in the testing guide; browser testing runs against the
+real service.
+
+Pushing a version tag such as `v0.1.1` runs the release checks and creates a GitHub
+Release with Linux amd64/arm64 binaries, corresponding source, and checksums.
+It also publishes `ghcr.io/scitrera/scitrera-auth-go:0.1.1` for `linux/amd64` and
+`linux/arm64`, built on native runners. The tag must match `versions.yaml`;
+`ci.github_release` controls the GitHub Release attachment step. Container
+publication runs on matching tag pushes after all release checks pass.
+See [release preparation](docs/releases.md) for the complete workflow.
 
 First-party code: **AGPL-3.0-only**. Aether and adapted proxy schema: **Apache-2.0**.
 See [LICENSE](LICENSE), [NOTICE](NOTICE), [third-party notices](THIRD_PARTY_NOTICES.md),

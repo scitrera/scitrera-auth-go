@@ -9,3 +9,5 @@
 .env
 *.log
 *.tsbuildinfo
+__pycache__/
+*.py[cod]

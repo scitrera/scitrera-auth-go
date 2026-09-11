@@ -18,3 +18,5 @@ internal/adminui/dist
 **/.omo
 **/.codex
 **/.agents
+**/__pycache__
+**/*.py[cod]

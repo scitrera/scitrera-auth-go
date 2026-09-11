@@ -77,9 +77,25 @@ local test database. Extract the source tarball to an empty directory and run
 `make build` there with `GOWORK=off` to check the actual corresponding-source path.
 
 `python3 scripts/check-release.py` verifies version/toolchain/source boundaries.
+Release-gate tests run in CI and can be run locally with:
+
+```sh
+uv run --no-project --with scitrera-repo-tools==0.1.30 python -m unittest discover -s scripts -p 'test_*.py'
+```
+
+They cover tag/version agreement, the publication toggle, manual/branch runs,
+and prerelease classification without creating any remote release. Archive tests
+exercise Make's real source-generation/check sequence: prohibited files must stop
+fresh and incremental builds before compilation, and a missing archive must fail.
+They require Node, GNU tar and Make, but do not install npm packages or compile Go.
+Container workflow tests verify the native runner/platform mapping, both digest
+inputs to the manifest merge, and tag-only publication after all release checks.
+`make check-metadata` also checks the reusable container workflow against
+repo-tools' generator output.
+
 `python3 scripts/notices.py` refreshes installed dependency license texts.
 `npm audit` and a secret scan complement, but do not replace, the explicit export
-review. The local verification record is kept with the candidate review evidence;
+review. Keep the local verification record with the release evidence;
 prepared GitHub workflows are not evidence of executed remote CI.
 
 ## Listener, telemetry and navigation coverage

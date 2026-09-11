@@ -74,9 +74,9 @@ retain their own licenses; consult the pinned images' system documentation.
 | `golang.org/x/crypto` | `v0.51.0` | [LICENSE](LICENSES/third-party/golang.org_x_crypto@v0.51.0/LICENSE), [PATENTS](LICENSES/third-party/golang.org_x_crypto@v0.51.0/PATENTS) |
 | `golang.org/x/net` | `v0.55.0` | [LICENSE](LICENSES/third-party/golang.org_x_net@v0.55.0/LICENSE), [PATENTS](LICENSES/third-party/golang.org_x_net@v0.55.0/PATENTS) |
 | `golang.org/x/oauth2` | `v0.36.0` | [LICENSE](LICENSES/third-party/golang.org_x_oauth2@v0.36.0/LICENSE) |
-| `golang.org/x/sync` | `v0.20.0` | [LICENSE](LICENSES/third-party/golang.org_x_sync@v0.20.0/LICENSE), [PATENTS](LICENSES/third-party/golang.org_x_sync@v0.20.0/PATENTS) |
+| `golang.org/x/sync` | `v0.21.0` | [LICENSE](LICENSES/third-party/golang.org_x_sync@v0.21.0/LICENSE), [PATENTS](LICENSES/third-party/golang.org_x_sync@v0.21.0/PATENTS) |
 | `golang.org/x/sys` | `v0.45.0` | [LICENSE](LICENSES/third-party/golang.org_x_sys@v0.45.0/LICENSE), [PATENTS](LICENSES/third-party/golang.org_x_sys@v0.45.0/PATENTS) |
-| `golang.org/x/text` | `v0.37.0` | [LICENSE](LICENSES/third-party/golang.org_x_text@v0.37.0/LICENSE), [PATENTS](LICENSES/third-party/golang.org_x_text@v0.37.0/PATENTS) |
+| `golang.org/x/text` | `v0.39.0` | [LICENSE](LICENSES/third-party/golang.org_x_text@v0.39.0/LICENSE), [PATENTS](LICENSES/third-party/golang.org_x_text@v0.39.0/PATENTS) |
 | `golang.org/x/time` | `v0.15.0` | [LICENSE](LICENSES/third-party/golang.org_x_time@v0.15.0/LICENSE), [PATENTS](LICENSES/third-party/golang.org_x_time@v0.15.0/PATENTS) |
 | `google.golang.org/genproto/googleapis/api` | `v0.0.0-20260526163538-3dc84a4a5aaa` | [LICENSE](LICENSES/third-party/google.golang.org_genproto_googleapis_api@v0.0.0-20260526163538-3dc84a4a5aaa/LICENSE) |
 | `google.golang.org/genproto/googleapis/rpc` | `v0.0.0-20260526163538-3dc84a4a5aaa` | [LICENSE](LICENSES/third-party/google.golang.org_genproto_googleapis_rpc@v0.0.0-20260526163538-3dc84a4a5aaa/LICENSE) |

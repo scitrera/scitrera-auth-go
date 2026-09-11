@@ -1,8 +1,9 @@
 # Source provenance
 
-Candidate: Scitrera Auth `0.1.0-rc.1`, prepared 2026-09-09.
-Proposed module/repository: `github.com/scitrera/scitrera-auth-go`.
-The standalone candidate was exported without parent Git history.
+Scitrera Auth was initially extracted on 2026-09-09.
+Module/repository: `github.com/scitrera/scitrera-auth-go`.
+The standalone source was exported without parent Git history. The current
+product version is defined in `versions.yaml`.
 
 ## First-party inputs
 
@@ -59,8 +60,5 @@ dependencies, are inventoried in THIRD_PARTY_NOTICES.md.
 node_modules, generated bundles, Git data and private environments, and rejects
 symlinks. It hashes sorted filenames and contents into `.source-revision`, then
 creates a normalized source tarball embedded alongside the dashboard. Binary
-`version` output includes this source digest. This distinguishes the candidate's
-new changes from its historical source input revision.
-
-The candidate contains prepared CI/release-artifact workflows only. No remote
-repository, tags, registry images or deployments were published during preparation.
+`version` output includes this source digest. It identifies the source included
+in each build separately from the historical input revision above.

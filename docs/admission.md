@@ -3,7 +3,7 @@
 Access requires an enabled user and an enabled tenant membership, followed by
 that tenant's provider and claim checks. **Auto-add defaults off for every tenant,
 including existing tenants.** An email-domain association alone grants no access.
-This intentionally replaces the earlier candidate's domain-only admission path,
+This replaces the original domain-only admission path,
 which allowed access without creating user or membership records.
 
 ## Tenant auto-add

@@ -142,7 +142,7 @@ function Dashboard({
     [toast, setToast] = useState(""),
     [error, setError] = useState<unknown>(null);
   const selectRecord = (id: string) =>
-    changeRoute({ ...route, selected: id, creating: false });
+    changeRoute({ ...route, selected: id, creating: false, sessionOffset: 0 });
   const setOffset = (offset: number) => changeRoute({ ...route, offset });
   const setCreating = (creating: boolean) =>
     changeRoute({ ...route, creating }, !creating);
@@ -352,6 +352,10 @@ function Dashboard({
                   id={selected}
                   reload={reload}
                   onSaved={saved}
+                  sessionOffset={route.sessionOffset}
+                  onSessionOffset={(sessionOffset) =>
+                    changeRoute({ ...route, sessionOffset })
+                  }
                 />
               )
             ) : (

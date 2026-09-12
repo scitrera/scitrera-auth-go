@@ -28,6 +28,47 @@ or reset revisions. The underlying cache TTL defaults to 5m and capacity 16384;
 the revision gate overrides that TTL when auth data changes. Startup checks detect
 missing/disabled triggers; monitor them if other schema owners can change DDL.
 
+## Browser sessions
+
+Redis/Valkey is the authoritative browser-session store. All auth-go replicas
+and public/internal/admin listeners must share its primary, DB and key prefix.
+There is no additional session cache and no separate Aether service: auth-go
+embeds Aether's Go session engine. Tenant/user configuration retains its local
+revision-aware cache; operator sessions remain in PostgreSQL.
+
+Open a user in the dashboard to list sessions by normalized email, across all
+tenants and providers. The list shows provider, creation and expiry, with
+individual and bulk revocation. This is a list of valid credentials, not online
+presence. Management IDs cannot authenticate and no OAuth claims are exposed.
+The same controls are in the [private operator API](api.md#browser-sessions).
+
+Revocation takes effect on subsequent session checks across replicas. Already
+accepted requests, downstream application sessions and provider-side Google/Entra
+SSO sessions are unaffected. The user can sign in again; disable the user or
+change admission policy to prevent further access. Revoke sessions before
+changing a user's email if sessions for the old email should stop working.
+
+On upgrade from the legacy Redis format, sessions are indexed when next used.
+Revoke-all invalidates both indexed and not-yet-used legacy sessions. Deploy all
+session-serving replicas together; old Aether versions do not enforce generation
+revocation. Do not roll back to an older session implementation while retaining
+the old session namespace: switch to a fresh prefix and require new sign-ins.
+
+Set `AUTH_PROXY_SESSION_TTL` deliberately (default 24h). Session records and user
+indexes expire; bulk revocation removes the current index and leaves records to
+expire naturally. A small per-subject generation counter persists after
+revoke-all, preventing older sessions from becoming valid again. Library callers
+that explicitly create nonexpiring sessions also retain those records indefinitely.
+Use a dedicated namespace with `noeviction`, persistence and capacity monitoring.
+Compose uses append-only persistence with `appendfsync always`; it does not expose
+Valkey's port. A store outage denies session authentication and causes admin
+operations to report failure. JWT mode has no server inventory or revocation.
+
+Treat backup restoration and failover as authentication state changes. Restoring
+an earlier store snapshot or losing acknowledged writes can undo revocations;
+use a fresh prefix to require new sign-ins after such a recovery. Never reset
+only the generation keys while retaining session records.
+
 ## Operator credentials and sessions
 
 Each named operator token is read from a private JSON file at startup. Keep files

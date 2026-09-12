@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/scitrera/aether/server/pkg/authproxy"
+	"github.com/scitrera/aether/server/pkg/authproxy/login"
 	"github.com/scitrera/aether/server/pkg/models"
 	"github.com/scitrera/scitrera-auth-go/internal/admin"
 	"github.com/scitrera/scitrera-auth-go/internal/mtdb"
@@ -64,7 +65,7 @@ func (c *client) call(method, path string, body any, status int) map[string]any 
 	}
 	return out
 }
-func setup(t *testing.T) (*client, *mtdb.Repo, string) {
+func setup(t *testing.T, stores ...login.SessionStore) (*client, *mtdb.Repo, string) {
 	t.Helper()
 	repo, _ := testdb.New(t)
 	if err := repo.Migrate(context.Background()); err != nil {
@@ -77,7 +78,11 @@ func setup(t *testing.T) (*client, *mtdb.Repo, string) {
 	raw, _ := os.ReadFile(path)
 	var creds admin.Credentials
 	json.Unmarshal(raw, &creds)
-	server, err := admin.New(admin.Options{Addr: "127.0.0.1:0", Origin: "https://admin.example.test", TokenFile: path, DB: repo.DB()})
+	var browserSessions login.SessionStore
+	if len(stores) > 0 {
+		browserSessions = stores[0]
+	}
+	server, err := admin.New(admin.Options{Addr: "127.0.0.1:0", Origin: "https://admin.example.test", TokenFile: path, DB: repo.DB(), BrowserSessions: browserSessions})
 	if err != nil {
 		t.Fatal(err)
 	}

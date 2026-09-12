@@ -66,10 +66,14 @@ export function ConfirmButton({
   children,
   onConfirm,
   label,
+  description = "This changes who can access this tenant.",
+  confirmLabel = "Confirm removal",
 }: {
   children: ReactNode;
   onConfirm: () => Promise<void>;
   label: string;
+  description?: string;
+  confirmLabel?: string;
 }) {
   const [confirm, setConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -88,7 +92,7 @@ export function ConfirmButton({
             aria-label={label}
           >
             <h2>{label}</h2>
-            <p>This changes who can access this tenant.</p>
+            <p>{description}</p>
             <ErrorMessage error={error} />
             <div className="actions">
               <Button
@@ -115,7 +119,7 @@ export function ConfirmButton({
                   }
                 }}
               >
-                Confirm removal
+                {confirmLabel}
               </Button>
             </div>
           </section>

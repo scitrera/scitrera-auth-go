@@ -122,3 +122,20 @@ Google unhosted/blank accounts, unverified emails, wrong or unconstrained
 organization claims, unknown providers and unrelated requested tenants never
 enroll. Browser QA verifies the tenant toggle defaults off and survives save,
 JSON/structured editing, reload and explicit disable.
+
+## Browser-session management
+
+Set `AUTH_TEST_REDIS_ADDR=127.0.0.1:6379` alongside `AUTH_TEST_POSTGRES_DSN` to
+exercise session management against a disposable Redis/Valkey service. Tests
+create unique key prefixes and isolated databases; they never flush a shared DB.
+The suites check operator/Origin/CSRF boundaries, safe management IDs, per-user
+isolation, both revocation operations across store instances, durable audit,
+unsupported JWT/disabled modes and storage failures. Synthetic signed OAuth tests
+verify a revoked session fails both public `/checkz` and internal `/auth/verify`.
+
+CI also compiles `internal/testbrowser` as a test executable, starts a disposable
+admin UI with 51 real Valkey sessions, and passes its private fixture file through
+`AUTH_BROWSER_SESSIONS_FIXTURE` to Playwright. It checks pagination URLs/history,
+reload, cancellation, single revocation and bulk revocation. This test server has
+no production routes or build target. Without that explicitly configured fixture,
+this one browser test skips while the normal configuration workflows still run.

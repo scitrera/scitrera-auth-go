@@ -251,6 +251,9 @@ tbody tr:hover {
   grid-template-columns: 1fr 1fr;
   gap: 20px;
 }
+.browser-sessions {
+  margin-top: 24px;
+}
 .policy-card {
   grid-column: 1/-1;
 }

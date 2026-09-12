@@ -11,6 +11,10 @@ jobs:
   check:
     runs-on: ubuntu-latest
     services:
+      valkey:
+        image: valkey/valkey:8-alpine@sha256:d2e18f3410b6f616de1417f570fa55261af2898b9c5b2cfb6781ce2373ea43d1
+        ports: [6379:6379]
+        options: --health-cmd "valkey-cli ping" --health-interval 2s --health-retries 30
       postgres:
         image: postgres:17.11-alpine@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73
         env:
@@ -22,6 +26,7 @@ jobs:
     env:
       GOWORK: "off"
       AUTH_TEST_POSTGRES_DSN: postgres://auth:local-ci-only@127.0.0.1:5432/auth?sslmode=disable
+      AUTH_TEST_REDIS_ADDR: 127.0.0.1:6379
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v7
@@ -40,7 +45,7 @@ jobs:
         run: uv run --no-project --with scitrera-repo-tools==0.1.30 python -m unittest discover -s scripts -p 'test_*.py'
       # Unit/race tests and vet are managed by repo-tools' generated workflows.
       - run: make build
-      - name: Browser workflows against Go and PostgreSQL
+      - name: Browser workflows against Go, PostgreSQL and Valkey
         env:
           SCITRERA_MT_DB_URL: postgres://auth:local-ci-only@127.0.0.1:5432/auth?sslmode=disable
           AUTH_PROXY_MODE: verify
@@ -55,7 +60,16 @@ jobs:
           export AUTH_BROWSER_TOKEN_FILE="$SCITRERA_AUTH_ADMIN_TOKEN_FILE"
           dist/scitrera-auth-proxy > .local/service.log 2>&1 &
           service_pid=$!
-          trap 'kill "$service_pid" || true' EXIT
+          go test -c -o .local/browser-fixture.test ./internal/testbrowser
+          export AUTH_BROWSER_SESSIONS_FIXTURE="$PWD/.local/browser-sessions.json"
+          .local/browser-fixture.test -test.run=TestServeBrowserSessions -test.timeout=5m > .local/browser-fixture.log 2>&1 &
+          fixture_pid=$!
+          trap 'kill "$service_pid" "$fixture_pid" || true; wait "$fixture_pid" || true' EXIT
+          for _ in $(seq 1 30); do
+            test -s "$AUTH_BROWSER_SESSIONS_FIXTURE" && break
+            sleep 1
+          done
+          test -s "$AUTH_BROWSER_SESSIONS_FIXTURE"
           for _ in $(seq 1 30); do
             curl -fsS http://127.0.0.1:9080/healthz && break
             sleep 1

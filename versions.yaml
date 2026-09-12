@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 # Canonical product version. Run make versions && make ci after editing.
-scitrera-auth-go: 0.1.1
+scitrera-auth-go: 0.1.2
 
 project_rules:
   scitrera-auth-go:
@@ -33,7 +33,12 @@ ci:
       GOWORK: "off"
       GOTOOLCHAIN: local
       AUTH_TEST_POSTGRES_DSN: postgres://auth:local-ci-only@127.0.0.1:5432/auth?sslmode=disable
+      AUTH_TEST_REDIS_ADDR: 127.0.0.1:6379
     services:
+      valkey:
+        image: valkey/valkey:8-alpine@sha256:d2e18f3410b6f616de1417f570fa55261af2898b9c5b2cfb6781ce2373ea43d1
+        ports: [6379:6379]
+        options: --health-cmd "valkey-cli ping" --health-interval 2s --health-retries 30
       postgres:
         image: postgres:17.11-alpine@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73
         env:

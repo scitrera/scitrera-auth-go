@@ -31,17 +31,20 @@ no longer loads a remote Scitrera asset.
 
 ## Public dependency inputs
 
-Aether server and API **v0.2.3** were resolved from the public Go proxy/checksum
-database, independently of the local Aether source reference. Both module tags
-point to `e63a20e2628e3fdff3b2d6d67b245e92c61bcb5a` in
-`https://github.com/scitrera/aether` (tags `server/v0.2.3`, `api/v0.2.3`).
-This matches the inspected local reference revision. A local unrelated untracked
-proxy test file was not used. Aether remains Apache-2.0.
+Aether server, API and Go SDK use the published **v0.2.4** module releases,
+including shared browser-session inventory and revocation. The module tags
+`server/v0.2.4`, `api/v0.2.4` and `sdk/go/v0.2.4` point to commit
+`89e1f93857229716e570150aa776b392cf397f17` in the
+[Aether v0.2.4 release](https://github.com/scitrera/aether/releases/tag/v0.2.4).
+These dependencies were resolved from the public Go proxy and checksum database
+with `GOWORK=off`; the standalone build has no local replacements.
+Aether remains Apache-2.0.
 
 | Module | Public checksum |
 |---|---|
-| `github.com/scitrera/aether/server v0.2.3` | `h1:oX/yjKzXET1HIgxk5Qgi7MkD0oSA2zhh6cQHrOlp00Y=` |
-| `github.com/scitrera/aether/api v0.2.3` | `h1:xuy6JgXUCO/mXnV4y1L6/OkpYsdgo4s1E0VmwGuCFjs=` |
+| `github.com/scitrera/aether/server v0.2.4` | `h1:cOJI9w/tL3UTlOH5HAWqLQVZdk8tY1UD0iZToTN7H5A=` |
+| `github.com/scitrera/aether/api v0.2.4` | `h1:sJyVyTE9jj7ZEYmNtV/X+QYf0LpVUdcEbhInl+vi5mU=` |
+| `github.com/scitrera/aether/sdk/go v0.2.4` | `h1:VDm88/6jZGUMym0QbBUB8acgMsioEyhVy6g4v7rPZQg=` |
 
 `migrations/001_proxy.sql` adapts selected table definitions from Aether migrations
 003, 007, 012 and 028, under Apache-2.0, in a dedicated schema. It omits the

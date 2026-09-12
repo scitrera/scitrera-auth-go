@@ -21,6 +21,37 @@ Every subsequent API call needs the session cookie. Writes also need
 stays in frontend memory. Operator tokens are never accepted as query strings or
 ordinary bearer credentials. GET requests with a foreign Origin are also rejected.
 
+## Browser sessions
+
+These endpoints use the same operator authentication, Host/Origin checks and
+write CSRF protection. They are available only on the private admin surface.
+They neither require `If-Match` nor change the configuration revision.
+
+- `GET /users/{uuid}/sessions?limit=50&offset=0` returns
+  `{supported, store, sessions: [{id, provider, issued_at, expires_at}], has_more}`.
+  Limit is 1–200; offset is 0–1000000. Results are ordered by expiry then ID.
+  The subject is the user's normalized email, across providers and tenants.
+- `DELETE /users/{uuid}/sessions/{id}` revokes one session. Unknown, already
+  revoked or other-user IDs are harmless no-ops.
+- `DELETE /users/{uuid}/sessions` invalidates all sessions created before its
+  atomic generation change, including legacy sessions not yet listed. Later
+  logins remain valid. Successful deletes return `{revoked: true}`.
+
+Management IDs cannot authenticate as cookies. Responses contain no bearer
+tokens, OAuth claims, IP addresses or last-activity estimates. Sessions represent
+valid credentials, not online users. Under concurrent login/revocation, pagination
+is a live view; refresh from the first page for a new view.
+
+When login is disabled or JWT storage is selected, GET reports `supported: false`
+and DELETE returns 409 `session_management_unavailable`. Store failures return
+503 `session_store_unavailable`, never a successful empty inventory.
+
+Revocations durably audit `.requested` before the Redis operation and `.completed`
+afterward, using actions `session.revoke` / `session.revoke_all`. An interrupted
+operation may have taken effect without a completion record; refresh before
+retrying. A retry of revoke-all also invalidates logins since the first attempt.
+The audit resource identifies the user but excludes supplied session IDs.
+
 ## Configuration resources
 
 Reads return `{revision: integer, data: ...}` and `ETag: "revision"`. List endpoints
@@ -32,7 +63,7 @@ happens before pagination, does not duplicate users with multiple memberships,
 and does not hide their other memberships. Missing tenants return an empty list;
 invalid filter values return 400.
 
-Use the received quoted revision in `If-Match` on **every** mutation, including
+Use the received quoted revision in `If-Match` on **every configuration** mutation, including
 creates. A successful write returns `{revision, data: {saved: true}}` only after
 commit. Read the resource again to see its stored representation.
 
@@ -134,6 +165,7 @@ it records field categories and revision without raw claims or credentials.
 The browser uses `/admin/tenants`, `/admin/tenants/{slug}`, `/admin/users`,
 `/admin/users/{uuid}` and `/admin/status`. Filters use `q`, `tenant`, `enabled`
 and `offset` query parameters; opening a create form adds `action=create`.
+User detail pages also preserve session pagination as `session_offset`.
 For example, `/admin/users?tenant=alpha&enabled=true` lists enabled members of
 alpha, and `/admin/users/{uuid}?tenant=alpha` retains that filter when returning
 to the list. Tenant configuration has a View users action that preselects its

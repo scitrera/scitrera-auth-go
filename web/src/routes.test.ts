@@ -10,10 +10,12 @@ test("user detail URL retains tenant, search, status and pagination", () => {
     q: "person+test@example.com",
     enabled: "false" as const,
     offset: 50,
+    sessionOffset: 100,
   };
   const url = new URL(routeURL(route), "https://admin.example.test");
   assert.deepEqual(readRoute(url.pathname, url.search), route);
   assert.equal(readRoute(url.pathname, url.search).tenant, "alpha");
+  assert.equal(readRoute(url.pathname, url.search).sessionOffset, 100);
 });
 test("tenant new is a real slug; creation state is an explicit query action", () => {
   assert.equal(readRoute("/admin/tenants/new", "").selected, "new");

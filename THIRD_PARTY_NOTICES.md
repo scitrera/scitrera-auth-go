@@ -51,7 +51,7 @@ retain their own licenses; consult the pinned images' system documentation.
 | `github.com/prometheus/procfs` | `v0.20.1` | [LICENSE](LICENSES/third-party/github.com_prometheus_procfs@v0.20.1/LICENSE), [NOTICE](LICENSES/third-party/github.com_prometheus_procfs@v0.20.1/NOTICE) |
 | `github.com/redis/go-redis/v9` | `v9.17.2` | [LICENSE](LICENSES/third-party/github.com_redis_go-redis_v9@v9.17.2/LICENSE) |
 | `github.com/rs/zerolog` | `v1.34.0` | [LICENSE](LICENSES/third-party/github.com_rs_zerolog@v1.34.0/LICENSE) |
-| `github.com/scitrera/aether/server` | `v0.2.3` | [LICENSE](LICENSES/third-party/github.com_scitrera_aether_server@v0.2.3/LICENSE) |
+| `github.com/scitrera/aether/server` | `v0.2.4` | [LICENSE](LICENSES/third-party/github.com_scitrera_aether_server@v0.2.4/LICENSE) |
 | `github.com/vmihailenco/msgpack/v5` | `v5.4.1` | [LICENSE](LICENSES/third-party/github.com_vmihailenco_msgpack_v5@v5.4.1/LICENSE) |
 | `github.com/vmihailenco/tagparser/v2` | `v2.0.0` | [LICENSE](LICENSES/third-party/github.com_vmihailenco_tagparser_v2@v2.0.0/LICENSE) |
 | `go.opentelemetry.io/auto/sdk` | `v1.2.1` | [LICENSE](LICENSES/third-party/go.opentelemetry.io_auto_sdk@v1.2.1/LICENSE) |

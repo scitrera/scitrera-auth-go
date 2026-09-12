@@ -12,15 +12,20 @@ import {
   CardContent,
 } from "./components/ui/card";
 import { ConfirmButton, ErrorMessage, Field, Loading, useLoad } from "./common";
+import { UserSessions } from "./UserSessions";
 
 export function UserEditor({
   id,
   reload,
   onSaved,
+  sessionOffset,
+  onSessionOffset,
 }: {
   id: string;
   reload: number;
   onSaved: (revision: number) => void;
+  sessionOffset: number;
+  onSessionOffset: (offset: number) => void;
 }) {
   const { data, error } = useLoad(
     () => request<Envelope<User>>(`/users/${id}`),
@@ -29,7 +34,18 @@ export function UserEditor({
   );
   if (error) return <ErrorMessage error={error} />;
   if (!data) return <Loading />;
-  return <UserForm user={data} onSaved={onSaved} />;
+  return (
+    <>
+      <UserForm user={data} onSaved={onSaved} />
+      <UserSessions
+        key={id}
+        userID={id}
+        offset={sessionOffset}
+        onOffset={onSessionOffset}
+        reload={reload}
+      />
+    </>
+  );
 }
 function UserForm({
   user,

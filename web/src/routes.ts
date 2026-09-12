@@ -8,6 +8,7 @@ export interface AdminRoute {
   tenant: string;
   enabled: "" | "true" | "false";
   offset: number;
+  sessionOffset: number;
   notFound?: boolean;
 }
 export const defaultRoute = (area: Area = "tenants"): AdminRoute => ({
@@ -18,6 +19,7 @@ export const defaultRoute = (area: Area = "tenants"): AdminRoute => ({
   tenant: "",
   enabled: "",
   offset: 0,
+  sessionOffset: 0,
 });
 export function readRoute(pathname: string, search: string): AdminRoute {
   const route = defaultRoute();
@@ -53,6 +55,14 @@ export function readRoute(pathname: string, search: string): AdminRoute {
   if (/^\d+$/.test(offset) && Number(offset) <= 1000000)
     route.offset = Number(offset);
   route.creating = !route.selected && query.get("action") === "create";
+  const sessionOffset = query.get("session_offset") ?? "0";
+  if (
+    route.area === "users" &&
+    route.selected &&
+    /^\d+$/.test(sessionOffset) &&
+    Number(sessionOffset) <= 1000000
+  )
+    route.sessionOffset = Number(sessionOffset);
   return route;
 }
 export function routeURL(route: AdminRoute): string {
@@ -62,6 +72,8 @@ export function routeURL(route: AdminRoute): string {
     params.set("tenant", route.tenant);
   if (route.enabled) params.set("enabled", route.enabled);
   if (route.offset) params.set("offset", String(route.offset));
+  if (route.area === "users" && route.selected && route.sessionOffset)
+    params.set("session_offset", String(route.sessionOffset));
   if (route.creating && !route.selected) params.set("action", "create");
   const query = route.area !== "status" ? params.toString() : "";
   return `/admin/${route.area}${route.selected ? `/${encodeURIComponent(route.selected)}` : ""}${query ? `?${query}` : ""}`;

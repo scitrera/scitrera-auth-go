@@ -20,6 +20,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/scitrera/aether/server/pkg/authproxy/login"
 	"golang.org/x/time/rate"
 )
 
@@ -36,17 +37,19 @@ type Options struct {
 	DB                      *sql.DB
 	UI                      http.Handler
 	Providers               []Provider
+	BrowserSessions         login.SessionStore
 }
 type Server struct {
-	store        *Store
-	operators    map[string][32]byte
-	origin, host string
-	secure       bool
-	ttl          time.Duration
-	http         *http.Server
-	ui           http.Handler
-	providers    []Provider
-	loginLimit   *rate.Limiter
+	store           *Store
+	operators       map[string][32]byte
+	origin, host    string
+	secure          bool
+	ttl             time.Duration
+	http            *http.Server
+	ui              http.Handler
+	providers       []Provider
+	loginLimit      *rate.Limiter
+	browserSessions login.SessionStore
 }
 
 func New(opts Options) (*Server, error) {
@@ -79,6 +82,7 @@ func New(opts Options) (*Server, error) {
 		opts.Providers = []Provider{}
 	}
 	s := &Server{store: &Store{opts.DB}, operators: operators, origin: opts.Origin, host: u.Host, secure: secure, ttl: ttl, ui: opts.UI, providers: opts.Providers, loginLimit: rate.NewLimiter(rate.Every(time.Second), 10)}
+	s.browserSessions = opts.BrowserSessions
 	s.http = &http.Server{Addr: opts.Addr, Handler: s, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 20 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 16384}
 	return s, nil
 }
@@ -207,6 +211,10 @@ func (s *Server) api(w http.ResponseWriter, r *http.Request, actor string) {
 	parts := strings.Split(path, "/")
 	if !strings.HasPrefix(r.URL.Path, Prefix+"/") {
 		s.fail(w, missing())
+		return
+	}
+	if len(parts) >= 3 && parts[0] == "users" && parts[2] == "sessions" {
+		s.userSessions(w, r, actor, parts)
 		return
 	}
 	if r.Method == "GET" {

@@ -12,7 +12,7 @@ import (
 	"github.com/scitrera/scitrera-auth-go/internal/mtdb"
 )
 
-var version = "0.1.1"
+var version = "0.1.2"
 var revision = "development"
 
 func command() (bool, error) {

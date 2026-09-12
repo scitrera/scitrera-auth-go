@@ -13,7 +13,7 @@ with Path('deploy/.env').open('x') as f:
 PY
 fi
 docker compose --env-file deploy/.env -f deploy/compose.yaml build auth
-docker compose --env-file deploy/.env -f deploy/compose.yaml up -d postgres
+docker compose --env-file deploy/.env -f deploy/compose.yaml up -d postgres valkey
 docker compose --env-file deploy/.env -f deploy/compose.yaml run --rm auth migrate
 if [ ! -f .local/operators.json ]; then
   # Use a separate writable bootstrap mount; the service mount stays read-only.

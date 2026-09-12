@@ -7,8 +7,8 @@ Version-tag releases publish `ghcr.io/scitrera/scitrera-auth-go` with native
 Docker selects the image matching the host architecture:
 
 ```sh
-docker pull ghcr.io/scitrera/scitrera-auth-go:0.1.1
-docker run --rm ghcr.io/scitrera/scitrera-auth-go:0.1.1 version
+docker pull ghcr.io/scitrera/scitrera-auth-go:0.1.2
+docker run --rm ghcr.io/scitrera/scitrera-auth-go:0.1.2 version
 ```
 
 Use the same environment settings and private operator credential mount described
@@ -100,13 +100,26 @@ does not publish this port. Keep secret files outside source exports; provision
 environment values through your deployment's secret manager. The upstream API
 currently consumes secret values from environment variables, not `*_FILE` paths.
 
-Use Redis/Valkey opaque sessions by setting `AUTH_PROXY_SESSION_STORE=redis` and
-`AUTH_PROXY_SESSION_REDIS_ADDR`, plus password/DB where needed. Alternatively use
+Redis/Valkey opaque sessions are the default when browser login is enabled.
+Compose includes persistent Valkey on a private network without a host port.
+The OAuth example selects `AUTH_PROXY_SESSION_STORE=redis` and
+`AUTH_PROXY_SESSION_REDIS_ADDR=valkey:6379`. Outside Compose, point every replica
+at the same shared primary, DB and prefix. Supported settings include
+`AUTH_PROXY_SESSION_REDIS_PASSWORD`, `AUTH_PROXY_SESSION_REDIS_DB` (default `0`),
+and `AUTH_PROXY_SESSION_REDIS_PREFIX` (default `auth-session:`). The fallback
+address is `AUTH_PROXY_REDIS_ADDR`. Isolate the store and use credentials for
+shared deployments. The current client uses a single plain TCP endpoint; direct
+TLS, Sentinel and Redis Cluster configuration are not exposed.
+
+Alternatively use
 `AUTH_PROXY_SESSION_STORE=jwt` with a random, at least 32-byte
 `AUTH_PROXY_SESSION_JWT_SIGNING_KEY`. Signed JWT sessions are stateless: browser
 logout clears the cookie but does not revoke a separately retained JWT before
 its expiry. Set `AUTH_PROXY_SESSION_TTL` deliberately. Operator sessions always
-use the separate revocable PostgreSQL store.
+use the separate revocable PostgreSQL store. JWT mode has no inventory or
+per-session server revocation; the dashboard identifies that limitation. Switching
+between JWT and Redis requires new sign-ins. See
+[session operations](operations.md#browser-sessions) for upgrades and retention.
 
 The upstream OIDC implementation supports configured standards-based providers.
 Names correspond exactly to tenant policy keys. The structured editor handles

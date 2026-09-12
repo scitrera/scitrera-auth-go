@@ -10,6 +10,9 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"github.com/google/uuid"
+	"github.com/redis/go-redis/v9"
+	"github.com/scitrera/aether/server/pkg/authproxy/login"
 	"io"
 	"math/big"
 	"net"
@@ -17,6 +20,7 @@ import (
 	"net/http/cookiejar"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -129,10 +133,16 @@ func TestSyntheticOIDCLoginTenantGateAndProxy(t *testing.T) {
 		if autoAdd {
 			name = "automatic_enrollment"
 		}
-		t.Run(name, func(t *testing.T) { syntheticOIDC(t, autoAdd) })
+		t.Run(name, func(t *testing.T) { syntheticOIDC(t, autoAdd, false) })
 	}
 }
-func syntheticOIDC(t *testing.T, autoAdd bool) {
+func TestRedisOIDCSessionRevocation(t *testing.T) {
+	if os.Getenv("AUTH_TEST_REDIS_ADDR") == "" {
+		t.Skip("set AUTH_TEST_REDIS_ADDR")
+	}
+	syntheticOIDC(t, false, true)
+}
+func syntheticOIDC(t *testing.T, autoAdd, useRedis bool) {
 	repo, dsn := testdb.New(t)
 	if err := repo.Migrate(context.Background()); err != nil {
 		t.Fatal(err)
@@ -188,6 +198,32 @@ func syntheticOIDC(t *testing.T, autoAdd bool) {
 	externalAddr, internalAddr := freeAddr(t), freeAddr(t)
 	for k, v := range map[string]string{"AUTH_PROXY_LOGIN_PROVIDERS": "azure", "AUTH_PROXY_LOGIN_AZURE_ISSUER": issuer.URL, "AUTH_PROXY_LOGIN_AZURE_CLIENT_ID": "synthetic-client", "AUTH_PROXY_LOGIN_AZURE_CLIENT_SECRET": "synthetic-secret", "AUTH_PROXY_LOGIN_AZURE_REDIRECT_URL": "http://" + externalAddr + "/auth/callback/azure", "AUTH_PROXY_SESSION_STORE": "jwt", "AUTH_PROXY_SESSION_JWT_SIGNING_KEY": strings.Repeat("synthetic-key-", 3), "AUTH_PROXY_SESSION_COOKIE_SECURE": "false", "AUTH_PROXY_SESSION_COOKIE_NAME": "auth_test_session", "AUTH_PROXY_SESSION_COOKIE_DOMAIN": ""} {
 		t.Setenv(k, v)
+	}
+	var manager *login.RedisOpaqueSessionStore
+	if useRedis {
+		prefix := "oidc-session-test:" + uuid.NewString() + ":"
+		t.Setenv("AUTH_PROXY_SESSION_STORE", "redis")
+		t.Setenv("AUTH_PROXY_SESSION_REDIS_ADDR", os.Getenv("AUTH_TEST_REDIS_ADDR"))
+		t.Setenv("AUTH_PROXY_SESSION_REDIS_PREFIX", prefix)
+		rdb := redis.NewClient(&redis.Options{Addr: os.Getenv("AUTH_TEST_REDIS_ADDR")})
+		t.Cleanup(func() {
+			var cursor uint64
+			for {
+				keys, next, err := rdb.Scan(context.Background(), cursor, prefix+"*", 100).Result()
+				if err != nil {
+					break
+				}
+				if len(keys) > 0 {
+					rdb.Del(context.Background(), keys...)
+				}
+				cursor = next
+				if cursor == 0 {
+					break
+				}
+			}
+			rdb.Close()
+		})
+		manager = login.NewRedisOpaqueSessionStore(rdb, prefix)
 	}
 	mtResolver, _ := resolver.New(resolver.Options{Repo: repo})
 	u, _ := url.Parse(dsn)
@@ -294,6 +330,35 @@ func syntheticOIDC(t *testing.T, autoAdd bool) {
 		t.Fatal("anonymous spoof survived", response.Status)
 	}
 	response.Body.Close()
+	if manager != nil {
+		page, err := manager.ListSessions(context.Background(), "person@example.com", 10, 0)
+		if err != nil || len(page.Sessions) != 1 {
+			t.Fatal("OAuth session not indexed", page, err)
+		}
+		response = get(extURL + "/checkz")
+		if response.StatusCode != 200 {
+			t.Fatal("public session check before revocation", response.Status)
+		}
+		response.Body.Close()
+		if err := manager.RevokeSession(context.Background(), "person@example.com", page.Sessions[0].ID); err != nil {
+			t.Fatal(err)
+		}
+		for _, endpoint := range []string{extURL + "/checkz", intURL + "/auth/verify?workspace_id=auth-app&tenant_id=alpha"} {
+			response = get(endpoint)
+			if response.StatusCode != 401 {
+				t.Fatal("revoked OAuth session accepted", endpoint, response.Status)
+			}
+			response.Body.Close()
+		}
+		response = get(extURL + "/api/auth-admin/v1/users/00000000-0000-0000-0000-000000000000/sessions")
+		// Unknown public paths can serve the sign-in landing page, but never
+		// dispatch to the private JSON API.
+		if strings.Contains(response.Header.Get("Content-Type"), "application/json") {
+			t.Fatal("session administration exposed publicly", response.Status)
+		}
+		response.Body.Close()
+		return
+	}
 	if _, err = repo.DB().Exec(`UPDATE public.users SET enabled=false`); err != nil {
 		t.Fatal(err)
 	}

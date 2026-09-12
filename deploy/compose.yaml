@@ -15,10 +15,12 @@ services:
       retries: 30
   auth:
     build: ..
-    image: scitrera-auth-go:0.1.1
+    image: scitrera-auth-go:0.1.2
     user: "${AUTH_LOCAL_UID:-1000}:${AUTH_LOCAL_GID:-1000}"
     depends_on:
       postgres: {condition: service_healthy}
+      valkey: {condition: service_healthy}
+    networks: [default, sessions]
     ports: ["127.0.0.1:8080:8080", "127.0.0.1:8082:8082"]
     volumes: ["../.local:/run/auth:ro"]
     env_file:
@@ -29,11 +31,27 @@ services:
       AUTH_PROXY_MODE: verify
       AUTH_PROXY_LISTEN_ADDR: ":8080"
       AUTH_PROXY_TOKEN_HMAC_KEY: ${AUTH_PROXY_TOKEN_HMAC_KEY:?Run deploy/setup.sh first}
+      AUTH_PROXY_REDIS_ADDR: valkey:6379
       SCITRERA_AUTH_ADMIN_ADDR: ":8082"
       SCITRERA_AUTH_ADMIN_ORIGIN: http://127.0.0.1:8082
       SCITRERA_AUTH_ADMIN_TOKEN_FILE: /run/auth/operators.json
     read_only: true
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
+  valkey:
+    image: valkey/valkey:8-alpine@sha256:d2e18f3410b6f616de1417f570fa55261af2898b9c5b2cfb6781ce2373ea43d1
+    command: [valkey-server, --appendonly, "yes", --appendfsync, always, --maxmemory-policy, noeviction]
+    volumes: [auth-sessions:/data]
+    networks: [sessions]
+    healthcheck:
+      test: [CMD, valkey-cli, ping]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+    security_opt: [no-new-privileges:true]
 volumes:
   auth-db:
+  auth-sessions:
+networks:
+  sessions:
+    internal: true

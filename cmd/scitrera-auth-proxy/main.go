@@ -35,6 +35,7 @@ import (
 	"errors"
 
 	pkgauthproxy "github.com/scitrera/aether/server/pkg/authproxy"
+	"github.com/scitrera/aether/server/pkg/authproxy/login"
 
 	"github.com/scitrera/scitrera-auth-go/internal/admin"
 	"github.com/scitrera/scitrera-auth-go/internal/adminui"
@@ -120,6 +121,17 @@ func run() error {
 			return fmt.Errorf("admin provider configuration: %v", e)
 		}
 		providers := []admin.Provider{}
+		var browserSessions login.SessionStore
+		if loginConfig.Enabled {
+			store, redisClient, err := loginConfig.BuildSessionStore()
+			if err != nil {
+				return fmt.Errorf("admin browser sessions: %w", err)
+			}
+			browserSessions = store
+			if redisClient != nil {
+				defer redisClient.Close()
+			}
+		}
 		for _, p := range loginConfig.Providers {
 			examples := []string{"email", "sub"}
 			switch p.Name {
@@ -130,7 +142,7 @@ func run() error {
 			}
 			providers = append(providers, admin.Provider{Name: p.Name, Configured: p.IssuerURL != "" && p.ClientID != "" && p.RedirectURL != "", Checks: examples})
 		}
-		adminServer, err = admin.New(admin.Options{Addr: addr, Origin: os.Getenv("SCITRERA_AUTH_ADMIN_ORIGIN"), TokenFile: os.Getenv("SCITRERA_AUTH_ADMIN_TOKEN_FILE"), SessionTTL: parseDur(os.Getenv("SCITRERA_AUTH_ADMIN_SESSION_TTL"), 8*time.Hour), DB: repo.DB(), UI: adminui.Handler(), Providers: providers})
+		adminServer, err = admin.New(admin.Options{Addr: addr, Origin: os.Getenv("SCITRERA_AUTH_ADMIN_ORIGIN"), TokenFile: os.Getenv("SCITRERA_AUTH_ADMIN_TOKEN_FILE"), SessionTTL: parseDur(os.Getenv("SCITRERA_AUTH_ADMIN_SESSION_TTL"), 8*time.Hour), DB: repo.DB(), UI: adminui.Handler(), Providers: providers, BrowserSessions: browserSessions})
 		if err != nil {
 			return fmt.Errorf("admin configuration: %v", err)
 		}

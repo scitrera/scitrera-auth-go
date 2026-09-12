@@ -14,6 +14,11 @@ can be filtered by tenant membership, name/email and enabled status. Dashboard
 views, selected records, filters and pagination have shareable URLs and support
 browser Back/Forward and reload.
 
+Browser sessions use shared Redis/Valkey through the embedded Aether library.
+From a user's dashboard page, operators can list valid sessions and revoke one
+or all of them. Session checks and revocation work across service replicas;
+no separate Aether service is needed. See [session operations](docs/operations.md#browser-sessions).
+
 ## Quick start with Docker
 
 Requires Docker Compose v2.24+, Python 3 for generating local setup secrets, and
@@ -25,7 +30,7 @@ network access to public image/module/npm registries during the first build.
 
 Open **http://127.0.0.1:8082/admin/**. Sign in using the named operator and token in
 `.local/operators.json`. The setup command creates that file privately, runs the
-migration, and starts PostgreSQL and the complete service. Re-running setup keeps
+migration, and starts PostgreSQL, Valkey and the complete service. Re-running setup keeps
 existing credentials and data. `deploy/.env` and `.local/` must remain private.
 
 Create a tenant, then create users and their memberships. For automatic enrollment,
@@ -39,7 +44,7 @@ docker compose --env-file deploy/.env -f deploy/compose.yaml logs auth
 docker compose --env-file deploy/.env -f deploy/compose.yaml down
 ```
 
-`down` retains the database volume. The setup publishes only loopback ports.
+`down` retains the database and session volumes. The setup publishes only loopback ports.
 Remote use requires a private network and TLS termination for the admin origin.
 For prebuilt multi-architecture images from GHCR, see
 [container images](docs/installation.md#container-images).
@@ -112,9 +117,9 @@ tests/typecheck, and release boundary checks. Database tests require the explici
 disposable DSN documented in the testing guide; browser testing runs against the
 real service.
 
-Pushing a version tag such as `v0.1.1` runs the release checks and creates a GitHub
+Pushing a version tag such as `v0.1.2` runs the release checks and creates a GitHub
 Release with Linux amd64/arm64 binaries, corresponding source, and checksums.
-It also publishes `ghcr.io/scitrera/scitrera-auth-go:0.1.1` for `linux/amd64` and
+It also publishes `ghcr.io/scitrera/scitrera-auth-go:0.1.2` for `linux/amd64` and
 `linux/arm64`, built on native runners. The tag must match `versions.yaml`;
 `ci.github_release` controls the GitHub Release attachment step. Container
 publication runs on matching tag pushes after all release checks pass.

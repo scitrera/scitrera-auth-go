@@ -60,11 +60,15 @@ type Options struct {
 	ReturnCookieHMACKey []byte
 	// Branding customises the landing page.
 	Branding Branding
-	// Repo, when set, lets /checkz enrich the session-status response with the
-	// user's tenant list (so the SPA can drive tenant selection). The concrete
-	// *mtdb.Repo from the internal plane is passed through here. When nil, or
-	// when a lookup errors, /checkz gracefully degrades to the basic
+	// DefaultTenant is an optional tenant slug used only for login branding
+	// when the request has no tenant query parameter. Empty means no hint.
+	DefaultTenant string
+	// Repo, when set, supplies public login branding for ?tenant=<slug> and lets
+	// /checkz enrich the session-status response with the user's tenant list.
+	// The concrete *mtdb.Repo from the internal plane is passed through here.
+	// When nil, or when a lookup errors, /checkz gracefully degrades to the basic
 	// {auth,user_id,email} response.
+	// Login branding falls back to Branding, with Scitrera defaults.
 	Repo tenantLookup
 	// CheckzAllowedOrigins is the server-side Origin allowlist enforced on the
 	// session-status endpoints (/checkz, /auth/checkz) BEFORE any session/PII

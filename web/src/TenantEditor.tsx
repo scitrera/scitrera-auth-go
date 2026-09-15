@@ -116,7 +116,7 @@ function Profile({
           </div>
           <Field
             label="Logo URL"
-            hint="Optional HTTPS image URL passed to applications."
+            hint={`Optional HTTPS image URL for applications and the public login page at /login?tenant=${tenant.data.slug}.`}
           >
             <Input
               type="url"

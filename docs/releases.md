@@ -66,7 +66,7 @@ job combines both digests into a multi-architecture manifest. No QEMU is used.
 repo-tools supplies registry login, Docker metadata, per-platform caches, and
 manifest merging. The jobs use `GITHUB_TOKEN` with `packages: write`.
 
-For `v0.1.2`, the image receives `0.1.2`, `0.1`, `latest`, and a commit SHA tag
+For `v0.1.3`, the image receives `0.1.3`, `0.1`, `latest`, and a commit SHA tag
 through repo-tools' standard Docker metadata rules. `VERSION` comes from
 `versions.yaml`; `REVISION` and the OCI revision label identify the Git commit.
 The executable retains its embedded corresponding-source content digest.
@@ -80,12 +80,12 @@ are marked as prereleases. Setting the flag to `false` keeps artifact preparatio
 and GHCR publication but skips the GitHub Release. Manual dispatch always prepares artifacts only,
 including when dispatched against a tag.
 
-For version 0.1.2, push the committed source and its tag:
+For version 0.1.3, push the committed source and its tag:
 
 ```sh
 git push origin main
-git tag v0.1.2
-git push origin v0.1.2
+git tag v0.1.3
+git push origin v0.1.3
 ```
 
 Packaging remains project-specific because the generated Go binary workflow does

@@ -117,9 +117,9 @@ tests/typecheck, and release boundary checks. Database tests require the explici
 disposable DSN documented in the testing guide; browser testing runs against the
 real service.
 
-Pushing a version tag such as `v0.1.2` runs the release checks and creates a GitHub
+Pushing a version tag such as `v0.1.3` runs the release checks and creates a GitHub
 Release with Linux amd64/arm64 binaries, corresponding source, and checksums.
-It also publishes `ghcr.io/scitrera/scitrera-auth-go:0.1.2` for `linux/amd64` and
+It also publishes `ghcr.io/scitrera/scitrera-auth-go:0.1.3` for `linux/amd64` and
 `linux/arm64`, built on native runners. The tag must match `versions.yaml`;
 `ci.github_release` controls the GitHub Release attachment step. Container
 publication runs on matching tag pushes after all release checks pass.

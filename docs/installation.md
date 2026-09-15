@@ -7,8 +7,8 @@ Version-tag releases publish `ghcr.io/scitrera/scitrera-auth-go` with native
 Docker selects the image matching the host architecture:
 
 ```sh
-docker pull ghcr.io/scitrera/scitrera-auth-go:0.1.2
-docker run --rm ghcr.io/scitrera/scitrera-auth-go:0.1.2 version
+docker pull ghcr.io/scitrera/scitrera-auth-go:0.1.3
+docker run --rm ghcr.io/scitrera/scitrera-auth-go:0.1.3 version
 ```
 
 Use the same environment settings and private operator credential mount described
@@ -135,6 +135,32 @@ it does not probe provider health. Global client changes require a restart.
 Set `AUTH_PROXY_TOKEN_HMAC_KEY` to a random secret (the Compose setup generates
 one). This also signs the public post-login return cookie. Configure secure login
 cookies and suitable cookie domains for your gateway/application deployment.
+
+## Login branding
+
+The public login page shows the Scitrera logo from `https://scitrera.com/logo2.png`
+above the `scitrera.ai` heading, with a "Powered by scitrera.ai" link at the bottom
+left. Customize the login card with `SCITRERA_AUTH_BRAND_NAME`,
+`SCITRERA_AUTH_BRAND_LOGO_URL`, and `SCITRERA_AUTH_BRAND_TAGLINE`. Unset or empty
+values use the Scitrera defaults; the logo URL can point to your own HTTPS image.
+
+For tenant branding, link to `/login?tenant=acme` (or `/?tenant=acme`), using the
+tenant's slug. An enabled tenant's name and HTTPS logo from **Tenant profile** in
+the admin dashboard override the login card's name and logo. Missing fields use
+the global branding above. Invalid, unknown or disabled tenant hints, or
+a database lookup failure, use the global branding. Changes apply on the next
+page load. The tagline and footer remain global.
+
+Optionally set `SCITRERA_AUTH_LOGIN_DEFAULT_TENANT=acme` to use that tenant's
+branding when a login URL has no `tenant` parameter. This is unset by default.
+An explicit parameter takes precedence, including `?tenant=` to request global
+branding. An unknown or disabled explicit tenant falls back to global branding,
+not the configured default tenant.
+
+The hint affects presentation only: it does not select a tenant for authorization,
+filter OAuth providers, enroll users, or change the post-login destination.
+Continue to use the existing `rd`/`next` return URL settings and tenant-scoped
+gateway admission checks. Tenant names and logos used here are public branding.
 
 ## Trusted gateway configuration
 

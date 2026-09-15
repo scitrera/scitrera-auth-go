@@ -25,6 +25,10 @@ func (f *fakeRepo) GetUserWithTenants(_ context.Context, _ string) (*mtdb.User, 
 	return f.user, f.err
 }
 
+func (f *fakeRepo) GetTenantBySlug(_ context.Context, _ string) (*mtdb.Tenant, error) {
+	return nil, f.err
+}
+
 // newCheckzServer builds a Server wired with a fake store + repo, bypassing
 // New() (which needs Redis + OIDC discovery).
 func newCheckzServer(store login.SessionStore, repo tenantLookup) *Server {

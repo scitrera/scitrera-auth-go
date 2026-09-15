@@ -48,7 +48,7 @@ func (s *Server) handleLanding(w http.ResponseWriter, r *http.Request) {
 		s.setReturnCookie(w, dest)
 	}
 
-	s.renderLanding(w)
+	s.renderLanding(w, r)
 }
 
 // isAuthenticated reports whether the request carries a live session.

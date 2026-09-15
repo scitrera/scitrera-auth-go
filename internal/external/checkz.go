@@ -15,11 +15,12 @@ import (
 )
 
 // tenantLookup is the narrow slice of the MT repository the external plane
-// needs to enrich /checkz with the session user's tenant list. The concrete
+// needs for login branding and the session user's tenant list. The concrete
 // *mtdb.Repo satisfies it; declaring the interface here (rather than importing
 // resolver) keeps the external package decoupled and avoids an import cycle.
 type tenantLookup interface {
 	GetUserWithTenants(ctx context.Context, email string) (*mtdb.User, error)
+	GetTenantBySlug(ctx context.Context, slug string) (*mtdb.Tenant, error)
 }
 
 // checkzTenant is the per-tenant entry in the /checkz response. Field names

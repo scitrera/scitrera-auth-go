@@ -147,6 +147,27 @@ WHERE lower(rtrim(btrim(td.domain), '.')) = $1`
 	return &t, nil
 }
 
+// GetTenantBySlug returns presentation metadata for a tenant. It returns
+// (nil, nil) when the slug is unknown; callers must check Enabled before use.
+func (r *Repo) GetTenantBySlug(ctx context.Context, slug string) (*Tenant, error) {
+	const q = `
+SELECT id::text, slug, name, enabled,
+       COALESCE(metadata ->> 'logo', ''),
+       COALESCE(metadata ->> 'default_workspace', '')
+FROM public.tenants
+WHERE slug = $1`
+	var t Tenant
+	if err := r.db.QueryRowContext(ctx, q, slug).Scan(
+		&t.ID, &t.Slug, &t.Name, &t.Enabled, &t.Logo, &t.DefaultWS,
+	); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("get_tenant_by_slug: %w", err)
+	}
+	return &t, nil
+}
+
 // GetTenantConfigParam reads tenant_config[tenant_slug,key] and msgpack-
 // decodes the BYTEA value. Returns (nil, nil) when the key is absent.
 //

@@ -15,7 +15,7 @@ services:
       retries: 30
   auth:
     build: ..
-    image: scitrera-auth-go:0.1.2
+    image: scitrera-auth-go:0.1.3
     user: "${AUTH_LOCAL_UID:-1000}:${AUTH_LOCAL_GID:-1000}"
     depends_on:
       postgres: {condition: service_healthy}

@@ -166,8 +166,9 @@ func run() error {
 			CheckzAllowedOrigins: splitCSV(os.Getenv("SCITRERA_AUTH_CHECKZ_ALLOWED_ORIGINS")),
 			ReturnCookieHMACKey:  []byte(os.Getenv("AUTH_PROXY_TOKEN_HMAC_KEY")),
 			Branding:             external.BrandingFromEnv(),
-			// Share the MT repo so /checkz can return the user's tenant list
-			// for SPA tenant selection (same source as /auth/verify's tenants).
+			DefaultTenant:        os.Getenv("SCITRERA_AUTH_LOGIN_DEFAULT_TENANT"),
+			// Share tenant presentation metadata for login branding and the
+			// user's tenant list for /checkz (same source as /auth/verify).
 			Repo: repo,
 		})
 		if err != nil {

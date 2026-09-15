@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 # Canonical product version. Run make versions && make ci after editing.
-scitrera-auth-go: 0.1.2
+scitrera-auth-go: 0.1.3
 
 project_rules:
   scitrera-auth-go:

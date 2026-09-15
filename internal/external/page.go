@@ -3,19 +3,31 @@
 package external
 
 import (
+	"context"
 	_ "embed"
 	"html/template"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
+	"regexp"
 	"sort"
 	"strings"
+	"time"
 )
 
 //go:embed select.html.tmpl
 var landingTmplRaw string
 
 var landingTmpl = template.Must(template.New("landing").Parse(landingTmplRaw))
+
+var tenantHintRE = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$`)
+
+const (
+	defaultBrandName    = "scitrera.ai"
+	defaultBrandLogoURL = "https://scitrera.com/logo2.png"
+	defaultBrandTagline = "Choose your organization's sign-in method."
+)
 
 // Branding customises the landing page chrome. Zero values fall back to the
 // scitrera defaults (see BrandingFromEnv).
@@ -29,9 +41,9 @@ type Branding struct {
 // scitrera.ai branding used by the legacy Python login page.
 func BrandingFromEnv() Branding {
 	return Branding{
-		ProductName: getenv("SCITRERA_AUTH_BRAND_NAME", "Scitrera Auth"),
-		LogoURL:     getenv("SCITRERA_AUTH_BRAND_LOGO_URL", ""),
-		Tagline:     getenv("SCITRERA_AUTH_BRAND_TAGLINE", "Choose your organization's sign-in method."),
+		ProductName: getenv("SCITRERA_AUTH_BRAND_NAME", defaultBrandName),
+		LogoURL:     getenv("SCITRERA_AUTH_BRAND_LOGO_URL", defaultBrandLogoURL),
+		Tagline:     getenv("SCITRERA_AUTH_BRAND_TAGLINE", defaultBrandTagline),
 	}
 }
 
@@ -81,7 +93,7 @@ func buildProviderButtons(names []string) []providerButton {
 }
 
 // renderLanding writes the provider-selection page.
-func (s *Server) renderLanding(w http.ResponseWriter) {
+func (s *Server) renderLanding(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
@@ -89,7 +101,7 @@ func (s *Server) renderLanding(w http.ResponseWriter) {
 	w.Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
 	w.Header().Set("Content-Security-Policy", "default-src 'none'; img-src 'self' https: data:; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'")
 	view := landingView{
-		Branding:  s.brandingWithDefaults(),
+		Branding:  s.brandingForRequest(r),
 		Providers: s.providers,
 	}
 	if err := landingTmpl.Execute(w, view); err != nil {
@@ -97,15 +109,62 @@ func (s *Server) renderLanding(w http.ResponseWriter) {
 	}
 }
 
+// brandingForRequest treats tenant as a presentation hint only. It never
+// selects an admission tenant, changes providers, or affects the return URL.
+func (s *Server) brandingForRequest(r *http.Request) Branding {
+	b := s.brandingWithDefaults()
+	if s.repo == nil {
+		return b
+	}
+	hint := s.opts.DefaultTenant
+	query, err := url.ParseQuery(r.URL.RawQuery)
+	if err != nil {
+		return b
+	}
+	if hints, present := query["tenant"]; present {
+		if len(hints) != 1 {
+			return b
+		}
+		hint = hints[0]
+	}
+	slug := strings.ToLower(strings.TrimSpace(hint))
+	if !tenantHintRE.MatchString(slug) {
+		return b
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+	defer cancel()
+	tenant, err := s.repo.GetTenantBySlug(ctx, slug)
+	if err != nil {
+		log.Printf("external: login branding lookup error: %v", err)
+		return b
+	}
+	if tenant == nil || !tenant.Enabled {
+		return b
+	}
+	if name := strings.TrimSpace(tenant.Name); name != "" {
+		b.ProductName = name
+	}
+	// The admin API accepts HTTPS logo URLs. Recheck legacy/direct database
+	// values here before putting them on an unauthenticated page.
+	logo := strings.TrimSpace(tenant.Logo)
+	if u, err := url.Parse(logo); err == nil && u.Scheme == "https" && u.Hostname() != "" && u.User == nil {
+		b.LogoURL = logo
+	}
+	return b
+}
+
 // brandingWithDefaults fills any empty branding fields with the scitrera
 // defaults (so a partially-populated Options.Branding still renders cleanly).
 func (s *Server) brandingWithDefaults() Branding {
 	b := s.opts.Branding
 	if b.ProductName == "" {
-		b.ProductName = "Scitrera Auth"
+		b.ProductName = defaultBrandName
+	}
+	if b.LogoURL == "" {
+		b.LogoURL = defaultBrandLogoURL
 	}
 	if b.Tagline == "" {
-		b.Tagline = "Choose your organization's sign-in method."
+		b.Tagline = defaultBrandTagline
 	}
 	return b
 }

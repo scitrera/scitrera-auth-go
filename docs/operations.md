@@ -123,3 +123,22 @@ Disabling auto-add retains enrolled members. An eligible user whose membership
 is removed can rejoin while auto-add is on; disable enrollment before removal
 when that is not intended. Disabling the global user prevents enrollment/access
 across all tenants. No per-tenant deny list is provided.
+
+### Sentinel and browser session lifetime
+
+Set `AUTH_PROXY_SESSION_TTL=48h` for a fixed 48-hour browser login lifetime.
+This controls the cookie and server-side session expiration for new sign-ins; it
+does not extend cookies already issued or the separate operator dashboard session.
+
+For replicated Valkey, configure `AUTH_PROXY_SESSION_SENTINEL_MASTER` and the
+comma-separated `AUTH_PROXY_SESSION_SENTINEL_ADDRS`. Use three independent voters
+and a primary/replica pair. The pinned Aether auth library discovers the promoted
+primary automatically. Sentinel credentials (`AUTH_PROXY_SESSION_SENTINEL_USERNAME`
+and `_PASSWORD`) are separate from session-store credentials
+(`AUTH_PROXY_SESSION_REDIS_USERNAME` and `_PASSWORD`). Direct-address Redis/Valkey
+configuration remains supported for Compose installations.
+
+Replication is asynchronous, so recent login/logout writes can be lost in a
+failure. Qualify failover, revocation, minority isolation, and empty-state recovery
+with the installer before routing production traffic. Do not restore historical
+session snapshots as a way to recover revoked sessions.

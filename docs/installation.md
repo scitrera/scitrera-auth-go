@@ -187,3 +187,18 @@ When upgrading from the original domain-only admission behavior, access stops un
 user has a membership or the tenant explicitly enables auto-add. This does not
 change stored domain associations or existing memberships. The existing migration
 version remains valid; no deployment-wide enrollment switch is needed.
+
+### Application subdomains and return destinations
+
+For a shared authentication host, set `SCITRERA_AUTH_ALLOWED_REDIRECT_ORIGINS`
+to the comma-separated exact application origins (scheme, hostname and port),
+for example `https://app.example.com`. This takes precedence over the legacy
+`SCITRERA_AUTH_ALLOWED_REDIRECT_HOSTS` list and rejects protocol downgrades,
+unlisted ports and URL userinfo. Keep the corresponding session cookie domain
+explicit when the login and application hosts differ.
+
+An already authenticated visit to `/?tenant=acme&rd=<encoded-absolute-URL>`
+honors that current sanitized return destination before any earlier return
+cookie or default. The old return cookie is then cleared. The tenant hint
+selects login branding; application admission still requires a tenant-scoped
+`/auth/verify?tenant_id=acme&workspace_id=auth-app` request.

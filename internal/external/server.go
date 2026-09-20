@@ -52,6 +52,9 @@ type Options struct {
 	// AllowedRedirectHosts is the set of hostnames an inbound ?rd=/?next=
 	// return URL may target. Same-host relative paths are always allowed.
 	AllowedRedirectHosts []string
+	// AllowedRedirectOrigins, when configured, replaces the host-only allowlist.
+	// It matches scheme and host:port, preventing downgrade or port changes.
+	AllowedRedirectOrigins []string
 	// ReturnCookieHMACKey, when non-empty, is the HMAC-SHA256 key used to sign
 	// the short-lived post-login return cookie so its value cannot be forged by
 	// anything that can merely set a cookie on the parent domain. Sourced from

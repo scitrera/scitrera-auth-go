@@ -126,6 +126,41 @@ func TestLanding_ValidSession_DisallowedReturnCookieFallsBackToTarget(t *testing
 	}
 }
 
+func TestLanding_ValidSession_CurrentReturnDestination(t *testing.T) {
+	for _, tc := range []struct {
+		name, query, cookie, want string
+	}{
+		{"fresh destination", "rd=" + url.QueryEscape("https://docs.example.net/report?view=analysis#claim"), "", "https://docs.example.net/report?view=analysis#claim"},
+		{"fresh overrides previous tab", "rd=" + url.QueryEscape("https://docs.example.net/current"), "https://docs.example.net/previous", "https://docs.example.net/current"},
+		{"next alias", "next=" + url.QueryEscape("https://docs.example.net/current"), "", "https://docs.example.net/current"},
+		{"host rejected", "rd=" + url.QueryEscape("https://evil.example.com/report"), "", "https://app.example.net"},
+		{"scheme rejected", "rd=" + url.QueryEscape("javascript:alert(1)"), "", "https://app.example.net"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			store := &fakeStore{data: map[string]*login.SessionData{
+				"sid-1": {UserID: "1", ExpiresAt: time.Now().Add(time.Hour)},
+			}}
+			s := newTestServer(store, Options{TargetURL: "https://app.example.net", AllowedRedirectHosts: []string{"docs.example.net"}})
+			req := httptest.NewRequest(http.MethodGet, "/?"+tc.query, nil)
+			req.AddCookie(&http.Cookie{Name: "scitrera_session", Value: "sid-1"})
+			if tc.cookie != "" {
+				req.AddCookie(&http.Cookie{Name: returnCookieName, Value: tc.cookie})
+			}
+			rr := httptest.NewRecorder()
+			s.handleLanding(rr, req)
+			if rr.Code != http.StatusFound || rr.Header().Get("Location") != tc.want {
+				t.Fatalf("status=%d location=%q, want 302 %q", rr.Code, rr.Header().Get("Location"), tc.want)
+			}
+			for _, cookie := range rr.Result().Cookies() {
+				if cookie.Name == returnCookieName && cookie.MaxAge < 0 {
+					return
+				}
+			}
+			t.Fatal("previous return state was not cleared")
+		})
+	}
+}
+
 func TestSanitizeRedirect(t *testing.T) {
 	s := newTestServer(&fakeStore{}, Options{
 		TargetURL:            "https://app.example.net",
@@ -303,4 +338,20 @@ func TestReturnCookie_HMAC(t *testing.T) {
 			t.Errorf("Location = %q, want signed return url honored", got)
 		}
 	})
+}
+
+func TestSanitizeRedirect_ExactOrigins(t *testing.T) {
+	s := newTestServer(&fakeStore{}, Options{
+		TargetURL:              "https://app.example.net",
+		AllowedRedirectHosts:   []string{"app.example.net"},
+		AllowedRedirectOrigins: []string{"https://app.example.net"},
+	})
+	for _, value := range []string{"http://app.example.net/bid", "https://app.example.net:8443/bid", "https://user@app.example.net/bid", "https://other.example.net/"} {
+		if _, ok := s.sanitizeRedirect(value); ok {
+			t.Errorf("accepted disallowed origin %q", value)
+		}
+	}
+	if value, ok := s.sanitizeRedirect("https://app.example.net/bid?a=1#proof"); !ok || value != "https://app.example.net/bid?a=1#proof" {
+		t.Fatal("valid deep link was not preserved")
+	}
 }

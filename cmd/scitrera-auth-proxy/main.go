@@ -155,10 +155,11 @@ func run() error {
 	var ext *external.Server
 	if extAddr := plan.external; extAddr != "" {
 		ext, err = external.New(external.Options{
-			ListenAddr:           extAddr,
-			Source:               adminui.SourceHandler(),
-			TargetURL:            os.Getenv("SCITRERA_AUTH_POST_LOGIN_TARGET"),
-			AllowedRedirectHosts: splitCSV(os.Getenv("SCITRERA_AUTH_ALLOWED_REDIRECT_HOSTS")),
+			ListenAddr:             extAddr,
+			Source:                 adminui.SourceHandler(),
+			TargetURL:              os.Getenv("SCITRERA_AUTH_POST_LOGIN_TARGET"),
+			AllowedRedirectHosts:   splitCSV(os.Getenv("SCITRERA_AUTH_ALLOWED_REDIRECT_HOSTS")),
+			AllowedRedirectOrigins: splitCSV(os.Getenv("SCITRERA_AUTH_ALLOWED_REDIRECT_ORIGINS")),
 			// Server-side Origin allowlist for /checkz + /auth/checkz (defense-in-depth
 			// on top of the edge Envoy CORS). Full origins (scheme+host), comma-separated;
 			// populated from the same CORS allow-origins list via the Helm chart. Empty =

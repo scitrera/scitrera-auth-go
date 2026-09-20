@@ -19,8 +19,8 @@ import (
 // handleLanding serves "/" (and the "/login" alias):
 //
 //   - if the request already carries a valid session, 302 to the post-login
-//     destination (the configured absolute target, or an allowlisted return
-//     URL captured earlier);
+//     destination (a fresh allowlisted return URL, a previously captured return
+//     URL, or the configured absolute target);
 //   - otherwise render the provider-selection landing page, stashing any
 //     allowlisted ?rd=/?next= return URL in a short-lived cookie so it can be
 //     honoured once the OAuth round-trip returns the browser to "/".
@@ -30,6 +30,7 @@ func (s *Server) handleLanding(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	rd := firstNonEmpty(r.URL.Query().Get("rd"), r.URL.Query().Get("next"))
 	if s.isAuthenticated(r) {
 		dest := s.opts.TargetURL
 		if rc := s.readReturnCookie(r); rc != "" {
@@ -37,13 +38,17 @@ func (s *Server) handleLanding(w http.ResponseWriter, r *http.Request) {
 				dest = d
 			}
 		}
+		// An explicit return destination belongs to this navigation and takes
+		// precedence over state left by an earlier login in another tab.
+		if d, ok := s.sanitizeRedirect(rd); ok {
+			dest = d
+		}
 		s.clearReturnCookie(w)
 		http.Redirect(w, r, dest, http.StatusFound)
 		return
 	}
 
 	// Capture an allowlisted return URL so it survives the OAuth round-trip.
-	rd := firstNonEmpty(r.URL.Query().Get("rd"), r.URL.Query().Get("next"))
 	if dest, ok := s.sanitizeRedirect(rd); ok {
 		s.setReturnCookie(w, dest)
 	}
@@ -86,11 +91,22 @@ func (s *Server) sanitizeRedirect(raw string) (string, bool) {
 	if err != nil {
 		return "", false
 	}
-	if u.Scheme != "http" && u.Scheme != "https" {
+	if (u.Scheme != "http" && u.Scheme != "https") || u.User != nil {
 		return "", false
 	}
 	host := strings.ToLower(u.Hostname())
 	if host == "" {
+		return "", false
+	}
+	if len(s.opts.AllowedRedirectOrigins) > 0 {
+		for _, origin := range s.opts.AllowedRedirectOrigins {
+			allowed, err := url.Parse(strings.TrimSpace(origin))
+			if err == nil && allowed.User == nil && allowed.RawQuery == "" && allowed.Fragment == "" &&
+				(allowed.Path == "" || allowed.Path == "/") && u.Scheme == allowed.Scheme &&
+				strings.EqualFold(u.Host, allowed.Host) {
+				return raw, true
+			}
+		}
 		return "", false
 	}
 	for _, h := range s.opts.AllowedRedirectHosts {

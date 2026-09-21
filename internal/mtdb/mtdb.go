@@ -13,6 +13,7 @@ package mtdb
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -34,6 +35,7 @@ type User struct {
 	TenantNames       []string
 	TenantLogos       []string
 	TenantDefaultWS   []string
+	MembershipChecks  map[string]map[string]map[string]any
 }
 
 // Tenant is the slug-keyed tenant view (subset of columns).
@@ -91,13 +93,15 @@ SELECT u.id::text                                   AS user_id,
        COALESCE(slugs.tenant_slugs, ARRAY []::text[]) AS tenant_slugs,
        COALESCE(slugs.tenant_names, ARRAY []::text[]) AS tenant_names,
        COALESCE(slugs.tenant_logos, ARRAY []::text[]) AS tenant_logos,
-       COALESCE(slugs.tenant_dw,    ARRAY []::text[]) AS tenant_default_workspace
+       COALESCE(slugs.tenant_dw,    ARRAY []::text[]) AS tenant_default_workspace,
+       COALESCE(slugs.member_checks, '{}'::jsonb) AS member_checks
 FROM public.users u
 LEFT JOIN LATERAL (
     SELECT array_agg(COALESCE(t.slug, '') ORDER BY t.slug)                               AS tenant_slugs,
            array_agg(COALESCE(t.name, '') ORDER BY t.slug)                               AS tenant_names,
            array_agg(COALESCE(t.metadata ->> 'logo', '') ORDER BY t.slug)               AS tenant_logos,
-           array_agg(COALESCE(t.metadata ->> 'default_workspace', '') ORDER BY t.slug)  AS tenant_dw
+           array_agg(COALESCE(t.metadata ->> 'default_workspace', '') ORDER BY t.slug)  AS tenant_dw,
+           jsonb_object_agg(t.slug, ut.auth_checks) AS member_checks
     FROM public.user_tenants ut
     JOIN public.tenants t ON t.id = ut.tenant_id
     WHERE ut.user_id = u.id AND t.enabled = true
@@ -106,15 +110,19 @@ WHERE lower(btrim(u.email)) = $1`
 
 	var u User
 	var defaultTenant sql.NullString
+	var memberChecks []byte
 	if err := db.QueryRowContext(ctx, q, email).Scan(
 		&u.ID, &u.Email, &u.Name, &u.Enabled, &defaultTenant,
 		pqArray(&u.TenantSlugs), pqArray(&u.TenantNames),
-		pqArray(&u.TenantLogos), pqArray(&u.TenantDefaultWS),
+		pqArray(&u.TenantLogos), pqArray(&u.TenantDefaultWS), &memberChecks,
 	); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("get_user_with_tenants: %w", err)
+	}
+	if err := json.Unmarshal(memberChecks, &u.MembershipChecks); err != nil {
+		return nil, fmt.Errorf("invalid membership claim policy: %w", err)
 	}
 	u.DefaultTenantSlug = defaultTenant.String
 	return &u, nil

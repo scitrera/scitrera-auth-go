@@ -181,7 +181,7 @@ func (r *Resolver) Resolve(ctx context.Context, in pkgauthproxy.ResolverInput) (
 	tenants := arraysToTenants(user.TenantSlugs, user.TenantNames, user.TenantLogos, user.TenantDefaultWS)
 
 	// Per-tenant auth_checks evaluation.
-	tenants, defaultTenant, dropped := r.applyAuthChecks(ctx, tenants, defaultTenant, provider, in.Claims, true)
+	tenants, defaultTenant, dropped := r.applyAuthChecks(ctx, tenants, defaultTenant, provider, in.Claims, user.MembershipChecks)
 	if len(tenants) == 0 {
 		r.log.Warn().Str("email", email).Strs("dropped", dropped).Msg("scitrera_mt: no tenants survived auth_checks")
 		return reject(http.StatusUnauthorized, "auth_checks_failed",
@@ -255,7 +255,7 @@ func (r *Resolver) applyAuthChecks(
 	tenants []tenantInfo,
 	defaultTenant, provider string,
 	claims map[string]any,
-	registeredMember bool,
+	membershipChecks map[string]map[string]map[string]any,
 ) (kept []tenantInfo, newDefault string, dropped []string) {
 	if provider == "" {
 		// No provider name — auth_checks key is built from provider, so we
@@ -286,13 +286,30 @@ func (r *Resolver) applyAuthChecks(
 			dropped = append(dropped, t.Slug)
 			continue
 		}
-		checks, ok := raw.(map[string]any)
-		if !ok || len(checks) == 0 {
+		checks, _ := raw.(map[string]any)
+		// Only the current user's enabled membership supplies these overrides.
+		// Enrollment never reads them. Copy so one member cannot alter cached
+		// tenant rules for anyone else.
+		if overrides, exists := membershipChecks[t.Slug][provider]; exists {
+			if len(overrides) == 0 {
+				dropped = append(dropped, t.Slug)
+				continue
+			}
+			merged := make(map[string]any, len(checks)+len(overrides))
+			for key, value := range checks {
+				merged[key] = value
+			}
+			for key, value := range overrides {
+				merged[key] = value
+			}
+			checks = merged
+		}
+		if len(checks) == 0 {
 			// No rules configured → tenant passes.
 			kept = append(kept, t)
 			continue
 		}
-		if ok, reason := evaluateTenantChecks(provider, checks, claims, registeredMember); ok {
+		if ok, reason := evaluateTenantChecks(provider, checks, claims, true); ok {
 			kept = append(kept, t)
 		} else {
 			r.log.Info().Str("tenant", t.Slug).Str("reason", reason).Msg("scitrera_mt: tenant dropped by auth_checks")

@@ -105,3 +105,12 @@ they do not enroll users or gain operator access. Incoming Scitrera user headers
 are explicitly cleared for machine requests to prevent spoofed extras surviving
 reverse-proxy forwarding. Session/access-log dashboards and global OAuth client
 editing remain deferred.
+
+## Selected external members
+
+An administrator can replace selected claim requirements on an existing
+user–tenant membership, for example accepting a support user's organization ID
+without changing tenant-wide enrollment rules. See the [membership
+API](api.md#membership-claim-overrides). The provider allowlist and every
+non-overridden check remain mandatory. Auto-add never reads, writes or restores
+overrides, even after an earlier membership was removed.

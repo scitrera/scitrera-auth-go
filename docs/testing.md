@@ -139,3 +139,9 @@ admin UI with 51 real Valkey sessions, and passes its private fixture file throu
 reload, cancellation, single revocation and bulk revocation. This test server has
 no production routes or build target. Without that explicitly configured fixture,
 this one browser test skips while the normal configuration workflows still run.
+
+Membership override tests cover real migration/adoption, operator API validation,
+audit, two warm resolver instances, replacement versus inheritance, required
+claims, disabled users/tenants, wrong providers/tenants, and removal followed by
+auto-add. Re-enrollment must leave an empty override map. The membership browser
+case runs only against an explicitly selected loopback disposable test server.

@@ -13,6 +13,7 @@ import {
 } from "./components/ui/card";
 import { ConfirmButton, ErrorMessage, Field, Loading, useLoad } from "./common";
 import { UserSessions } from "./UserSessions";
+import { MembershipAuthEditor } from "./MembershipAuthEditor";
 
 export function UserEditor({
   id,
@@ -58,7 +59,8 @@ function UserForm({
     [email, setEmail] = useState(user.data.email),
     [enabled, setEnabled] = useState(user.data.enabled),
     [defaultTenant, setDefaultTenant] = useState(user.data.default_tenant_slug),
-    [membership, setMembership] = useState("");
+    [membership, setMembership] = useState(""),
+    [editingMembership, setEditingMembership] = useState("");
   useEffect(() => {
     if (defaultTenant && !user.data.memberships.includes(defaultTenant))
       setDefaultTenant("");
@@ -171,6 +173,14 @@ function UserForm({
               {user.data.memberships.map((slug) => (
                 <li key={slug}>
                   <code>{slug}</code>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    aria-label={`Edit sign-in checks for ${slug}`}
+                    onClick={() => setEditingMembership(slug)}
+                  >
+                    Sign-in checks
+                  </Button>
                   <ConfirmButton
                     label={`Remove membership in ${slug}?`}
                     onConfirm={async () => {
@@ -195,6 +205,15 @@ function UserForm({
               accounts can join a tenant with auto-add enabled.
             </p>
           )}
+          {editingMembership &&
+            user.data.memberships.includes(editingMembership) && (
+              <MembershipAuthEditor
+                key={`${editingMembership}:${user.revision}`}
+                userID={user.data.id}
+                tenant={editingMembership}
+                onSaved={onSaved}
+              />
+            )}
           <form className="form" onSubmit={add}>
             <Field
               label="Tenant slug to add"

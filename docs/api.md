@@ -78,7 +78,8 @@ commit. Read the resource again to see its stored representation.
 | `/users` | GET, POST | Create `{email, name, enabled}`; list users with memberships/default |
 | `/users/{id}` | GET, PUT | Edit `{email, name, enabled, default_tenant_slug?}` |
 | `/users/{id}/memberships` | GET, POST | String list; add `{tenant_slug}` |
-| `/users/{id}/memberships/{slug}` | DELETE | Remove association; clear matching stored default |
+| `/users/{id}/memberships/{slug}` | DELETE | Remove association, its overrides, and matching stored default |
+| `/users/{id}/memberships/{slug}/auth` | GET, PUT | `{checks: {provider: check-map}}`; explicit membership claim overrides |
 
 Metadata accepts only `logo` (HTTPS URL/string) and `default_workspace` (string).
 Omitted keys are unchanged; null deletes the named key; unrelated stored metadata
@@ -145,6 +146,33 @@ string options.
 The auto-add flag, allowlist and check keys in a write commit together. Failed storage operations
 roll back every affected key, the revision increments, and the audit event.
 Non-auth tenant config is never returned or modified by this API.
+
+## Membership claim overrides
+
+An operator can explicitly edit an existing user–tenant relationship through
+`/users/{id}/memberships/{slug}/auth`. The ordinary operator session, Origin/CSRF
+checks and `If-Match` revision are required. Missing memberships return 404; the
+endpoint never creates a user or membership.
+
+```json
+{"checks":{"azure":{"tid":["22222222-2222-4222-8222-222222222222"]}}}
+```
+
+This replaces the Azure tenant-ID requirement for this membership only. Every
+named override replaces that base claim requirement; all other claims remain
+mandatory. The tenant provider allowlist still applies. Scalar/list rules use
+the same validation as tenant checks. Null and empty provider maps are rejected.
+PUT replaces the whole override map; `{"checks":{}}` restores inherited rules.
+
+Disabled users and tenants, absent memberships, disallowed providers and wrong
+claim values still fail. Auto-add never reads, writes or restores overrides.
+Removing membership deletes them. They follow the user ID, not a matching email
+on another record. Revision invalidation propagates updates to all replicas.
+Audit records `membership:auth_checks` without claim values.
+
+In the dashboard, open a user and choose **Sign-in checks** beside the relevant
+tenant. Save the provider-to-claims JSON explicitly. **Use tenant defaults**
+clears the draft; saving is still required.
 
 ## Concurrency and audit
 

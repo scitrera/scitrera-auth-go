@@ -266,6 +266,15 @@ func (s *Server) api(w http.ResponseWriter, r *http.Request, actor string) {
 				return domains(ctx, tx, parts[1])
 			case len(parts) == 3 && parts[0] == "tenants" && parts[2] == "auth":
 				return policy(ctx, tx, parts[1])
+			case len(parts) == 5 && parts[0] == "users" && parts[2] == "memberships" && parts[4] == "auth":
+				if err := userID(parts[1]); err != nil {
+					return nil, err
+				}
+				tenant, err := slug(parts[3])
+				if err != nil {
+					return nil, err
+				}
+				return membershipAuth(ctx, tx, parts[1], tenant)
 			case path == "users":
 				return users(ctx, tx, "", limit, offset, filters)
 			case len(parts) == 2 && parts[0] == "users":
@@ -418,6 +427,23 @@ func (s *Server) api(w http.ResponseWriter, r *http.Request, actor string) {
 		}
 		fields = []string{"memberships"}
 		mutate = func(tx *sql.Tx) error { return membership(ctx, tx, parts[1], body.Tenant, false) }
+	case len(parts) == 5 && parts[0] == "users" && parts[2] == "memberships" && parts[4] == "auth" && r.Method == "PUT":
+		var body MembershipAuth
+		if err = decode(w, r, &body); err == nil {
+			err = body.validate()
+		}
+		if err == nil {
+			err = userID(parts[1])
+		}
+		if err == nil {
+			parts[3], err = slug(parts[3])
+		}
+		if err != nil {
+			s.fail(w, err)
+			return
+		}
+		fields = []string{"membership:auth_checks"}
+		mutate = func(tx *sql.Tx) error { return saveMembershipAuth(ctx, tx, parts[1], parts[3], body) }
 	case len(parts) == 4 && parts[0] == "users" && parts[2] == "memberships" && r.Method == "DELETE":
 		if err = userID(parts[1]); err != nil {
 			s.fail(w, err)

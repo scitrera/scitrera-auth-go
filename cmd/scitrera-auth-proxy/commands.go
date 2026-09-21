@@ -56,7 +56,7 @@ func command() (bool, error) {
 		if err = repo.Migrate(ctx); err != nil {
 			return true, err
 		}
-		fmt.Println("Auth schema version 1 ready.")
+		fmt.Println("Auth schema version 2 ready.")
 		return true, nil
 	case "help", "-h", "--help":
 		fmt.Println("Usage: scitrera-auth-proxy [migrate | bootstrap --token-file PATH --operator NAME | version]\nNo arguments starts the configured auth listeners. See README.md for environment configuration.")

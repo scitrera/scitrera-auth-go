@@ -91,8 +91,8 @@ func (r *Repo) Migrate(ctx context.Context) error {
 	if err = tx.QueryRowContext(ctx, `SELECT COALESCE(max(version),0) FROM public.auth_admin_migrations`).Scan(&version); err != nil {
 		return err
 	}
-	if version > 1 {
-		return fmt.Errorf("unsupported auth schema version %d (binary supports 1)", version)
+	if version > 2 {
+		return fmt.Errorf("unsupported auth schema version %d (binary supports 2)", version)
 	}
 	if version == 0 {
 		raw, _ := migrations.Files.ReadFile("001_auth.sql")
@@ -100,6 +100,18 @@ func (r *Repo) Migrate(ctx context.Context) error {
 			return fmt.Errorf("migration 001 failed (check legacy normalized duplicates/schema): %w", err)
 		}
 		if _, err = tx.ExecContext(ctx, `INSERT INTO public.auth_admin_migrations(version) VALUES(1)`); err != nil {
+			return err
+		}
+	}
+	if version < 2 {
+		raw, err := migrations.Files.ReadFile("002_membership_checks.sql")
+		if err != nil {
+			return err
+		}
+		if _, err = tx.ExecContext(ctx, string(raw)); err != nil {
+			return fmt.Errorf("migration 002 failed: %w", err)
+		}
+		if _, err = tx.ExecContext(ctx, `INSERT INTO public.auth_admin_migrations(version) VALUES(2)`); err != nil {
 			return err
 		}
 	}
@@ -150,8 +162,12 @@ func checkSchema(ctx context.Context, q queryer) error {
 		return err
 	}
 	var version, count int
-	if err := q.QueryRowContext(ctx, `SELECT COALESCE(max(version),0),count(*) FROM public.auth_admin_migrations`).Scan(&version, &count); err != nil || version != 1 || count != 1 {
-		return fmt.Errorf("auth schema version 1 required; run scitrera-auth-proxy migrate")
+	if err := q.QueryRowContext(ctx, `SELECT COALESCE(max(version),0),count(*) FROM public.auth_admin_migrations`).Scan(&version, &count); err != nil || version != 2 || count != 2 {
+		return fmt.Errorf("auth schema version 2 required; run scitrera-auth-proxy migrate")
+	}
+	var membershipType, nullable string
+	if err := q.QueryRowContext(ctx, `SELECT udt_name,is_nullable FROM information_schema.columns WHERE table_schema='public' AND table_name='user_tenants' AND column_name='auth_checks'`).Scan(&membershipType, &nullable); err != nil || membershipType != "jsonb" || nullable != "NO" {
+		return fmt.Errorf("user_tenants.auth_checks must be non-null jsonb; run scitrera-auth-proxy migrate")
 	}
 	for table, cols := range map[string]string{"auth_admin_state": "singleton,revision", "auth_admin_sessions": "token_hash,operator,credential_hash,csrf_hash,expires_at,created_at", "auth_admin_audit": "id,operator,action,resource,fields,revision,created_at"} {
 		rows, err := q.QueryContext(ctx, "SELECT "+cols+" FROM public."+table+" LIMIT 0")

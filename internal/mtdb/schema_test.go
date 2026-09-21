@@ -20,7 +20,7 @@ func TestAdoptLegacySchema(t *testing.T) {
 	if _, err = repo.DB().Exec(string(ddl)); err != nil {
 		t.Fatal(err)
 	}
-	if _, err = repo.DB().Exec(`INSERT INTO public.tenants(id,slug,name,metadata) VALUES('11111111-1111-4111-8111-111111111111','legacy','Legacy','{"private_flag":"preserve","nullable":null}'); INSERT INTO public.users(email,name) VALUES('Legacy@Example.COM','Legacy'); INSERT INTO public.tenant_kv_store(tenant_slug,key,value) VALUES('legacy','unrelated',decode('0102','hex'))`); err != nil {
+	if _, err = repo.DB().Exec(`INSERT INTO public.tenants(id,slug,name,metadata) VALUES('11111111-1111-4111-8111-111111111111','legacy','Legacy','{"private_flag":"preserve","nullable":null}'); INSERT INTO public.users(email,name) VALUES('Legacy@Example.COM','Legacy'); INSERT INTO public.user_tenants(user_id,tenant_id) SELECT u.id,t.id FROM public.users u CROSS JOIN public.tenants t; INSERT INTO public.tenant_kv_store(tenant_slug,key,value) VALUES('legacy','unrelated',decode('0102','hex'))`); err != nil {
 		t.Fatal(err)
 	}
 	// Python msgpack.packb({'tid':['synthetic']}) known interoperable fixture.
@@ -49,6 +49,9 @@ func TestAdoptLegacySchema(t *testing.T) {
 	user, err := repo.GetUserWithTenants(context.Background(), "legacy@example.com")
 	if err != nil || user == nil {
 		t.Fatal("legacy normalized lookup", err)
+	}
+	if len(user.MembershipChecks["legacy"]) != 0 || len(user.TenantSlugs) != 1 {
+		t.Fatal("legacy membership not preserved with empty overrides", user)
 	}
 	v, err := repo.GetTenantConfigParam(context.Background(), "legacy", "auth:checks:azure")
 	if err != nil {
@@ -111,7 +114,7 @@ func TestRejectPartialAndDamagedSchema(t *testing.T) {
 		if err := repo.Migrate(context.Background()); err != nil {
 			t.Fatal(err)
 		}
-		repo.DB().Exec(`INSERT INTO public.auth_admin_migrations(version) VALUES(2)`)
+		repo.DB().Exec(`INSERT INTO public.auth_admin_migrations(version) VALUES(3)`)
 		if err := repo.Migrate(context.Background()); err == nil {
 			t.Fatal("future schema accepted")
 		}

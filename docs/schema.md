@@ -1,7 +1,7 @@
 # Schema ownership
 
 `scitrera-auth-proxy migrate` is explicit, serialized with a PostgreSQL advisory
-lock, and transactional. It creates version 1 on an empty database or adopts the
+lock, and transactional. It creates schema version 2 on an empty database or adopts the
 complete legacy five-table contract. Run it once per deployment before starting
 replicas; a second run is safe. PostgreSQL 16+ is the supported minimum.
 
@@ -18,7 +18,9 @@ encoded to MessagePack by Go, not stored as raw JSON bytes.
 
 Auth-owned additions:
 
-- `auth_admin_migrations`: version ledger.
+- `auth_admin_migrations`: version ledger (001 base, 002 membership checks).
+- `user_tenants.auth_checks`: non-null JSONB object, empty by default. Only the
+  operator membership API populates overrides; deletion removes them.
 - `auth_admin_state`: singleton committed configuration revision.
 - `auth_admin_sessions`: token/CSRF/credential hashes, operator names and expiry.
 - `auth_admin_audit`: actor, action, resource, changed field categories, revision,
@@ -60,3 +62,8 @@ external credential file. Before shared-MT adoption, test against a disposable
 copy with the same constraints and validate all downstream writers. This release
 does not modify the platform provisioning workflow or claim ownership of its
 live database migrations.
+
+Migration 002 adds the membership column with an empty default. Existing members
+keep their ordinary tenant checks. Run migration before rolling out replicas.
+Older binaries require schema version 1 at startup; rollback needs a compatible
+binary or reviewed database restore, not deletion of the migration ledger/data.

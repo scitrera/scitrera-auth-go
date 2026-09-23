@@ -27,6 +27,11 @@ Integration tests cover:
 - Warm caches on two resolver instances, disable/change/remove propagation.
 - A synthetic local RSA-signed OIDC issuer through login, callback, tenant-scoped
   verification, anonymous spoof clearing, public/internal separation and logout.
+- Microsoft organizations discovery and real synthetic browser redirects on both
+  listeners, signed tenant-specific tokens, uppercase-domain auto-add, and denial
+  without membership creation for a different directory or email domain. Provider
+  tests cover issuer/tid binding, signing-key issuer scope, signatures, audience,
+  expiration, nonce, personal-account restrictions and concurrent key rotation.
 - A real reverse-proxy backend with a synthetic machine API token and spoofed
   incoming identity headers, preserving the verified machine principal.
 - Multiple Google hosted domains and an explicit blank option: enabled members

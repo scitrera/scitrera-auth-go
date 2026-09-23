@@ -31,20 +31,16 @@ no longer loads a remote Scitrera asset.
 
 ## Public dependency inputs
 
-Aether server, API and Go SDK use the published **v0.2.4** module releases,
-including shared browser-session inventory and revocation. The module tags
-`server/v0.2.4`, `api/v0.2.4` and `sdk/go/v0.2.4` point to commit
-`89e1f93857229716e570150aa776b392cf397f17` in the
-[Aether v0.2.4 release](https://github.com/scitrera/aether/releases/tag/v0.2.4).
-These dependencies were resolved from the public Go proxy and checksum database
-with `GOWORK=off`; the standalone build has no local replacements.
-Aether remains Apache-2.0.
+Aether server uses the published module revision **v0.2.5-0.20260923202941-e4bcd2e2ff0a**,
+commit [`e4bcd2e2ff0a6815de5ada0d276685409811c023`](https://github.com/scitrera/aether/commit/e4bcd2e2ff0a6815de5ada0d276685409811c023).
+It provides the generic browser-provider/verifier extension and nonce-bound
+callbacks; the Microsoft-specific implementation lives in auth-go. The dependency
+was resolved from the public Go proxy and checksum database with `GOWORK=off`;
+the standalone build has no local replacements. Aether remains Apache-2.0.
 
 | Module | Public checksum |
 |---|---|
-| `github.com/scitrera/aether/server v0.2.4` | `h1:cOJI9w/tL3UTlOH5HAWqLQVZdk8tY1UD0iZToTN7H5A=` |
-| `github.com/scitrera/aether/api v0.2.4` | `h1:sJyVyTE9jj7ZEYmNtV/X+QYf0LpVUdcEbhInl+vi5mU=` |
-| `github.com/scitrera/aether/sdk/go v0.2.4` | `h1:VDm88/6jZGUMym0QbBUB8acgMsioEyhVy6g4v7rPZQg=` |
+| `github.com/scitrera/aether/server v0.2.5-0.20260923202941-e4bcd2e2ff0a` | `h1:BZyHmEz9ky4ROcJSHmXJRBLG5KZI2aFilGFe4NYdfqM=` |
 
 `migrations/001_proxy.sql` adapts selected table definitions from Aether migrations
 003, 007, 012 and 028, under Apache-2.0, in a dedicated schema. It omits the

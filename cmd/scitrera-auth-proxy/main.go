@@ -6,8 +6,8 @@
 // a ScitreraIdentityResolver that talks to the Scitrera MT Postgres schema
 // (users / tenants / user_tenants / tenant_domains / tenant_config). Every
 // other piece of the auth-proxy — composite authenticator chain, ACL, OBO
-// authority resolution, browser OAuth login flow — comes from the OSS
-// library unchanged.
+// authority resolution, browser OAuth handlers and sessions — comes from the OSS
+// library. Microsoft-specific OIDC discovery/verification is supplied here.
 //
 // Configuration: same env vars as the OSS auth-proxy, plus:
 //
@@ -40,6 +40,7 @@ import (
 	"github.com/scitrera/scitrera-auth-go/internal/admin"
 	"github.com/scitrera/scitrera-auth-go/internal/adminui"
 	"github.com/scitrera/scitrera-auth-go/internal/external"
+	"github.com/scitrera/scitrera-auth-go/internal/loginproviders"
 	"github.com/scitrera/scitrera-auth-go/internal/mtdb"
 	"github.com/scitrera/scitrera-auth-go/internal/observability"
 	"github.com/scitrera/scitrera-auth-go/internal/resolver"
@@ -221,6 +222,7 @@ func run() error {
 		runErrCh <- pkgauthproxy.Run(
 			ctx, cfg,
 			pkgauthproxy.WithIdentityResolver(mtResolver),
+			pkgauthproxy.WithLoginProviderFactory(loginproviders.New),
 			pkgauthproxy.WithHandlerMiddleware(func(next http.Handler) http.Handler {
 				close(libraryInitialized)
 				return plan.handler(plan.internal, internalOtelHandler(next), publicHandler, adminHandler, telemetry.Metrics)

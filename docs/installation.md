@@ -121,7 +121,43 @@ per-session server revocation; the dashboard identifies that limitation. Switchi
 between JWT and Redis requires new sign-ins. See
 [session operations](operations.md#browser-sessions) for upgrades and retention.
 
-The upstream OIDC implementation supports configured standards-based providers.
+### Microsoft Entra organizational sign-in
+
+For an application registration that permits accounts in any organizational
+directory, use `https://login.microsoftonline.com/organizations/v2.0` as the
+Azure issuer. A directory-specific issuer starts login in that directory; another
+organization's user may be rejected by Microsoft before platform enrollment runs.
+Adding a verified publisher does not change the configured authority.
+
+Auth-go supplies the Microsoft provider adapter to Aether's pluggable browser
+login interface on both listeners. It supports the public-cloud `organizations`
+and `common` authorities. It binds the signed token's GUID `tid` to its exact
+`https://login.microsoftonline.com/<tid>/v2.0` issuer and restricts each Microsoft
+signing key to its declared issuer scope. Signature, audience, expiration and
+browser nonce/state checks remain required. Discovery and key fetches use fixed
+Microsoft endpoints, bounded responses/timeouts and a shared, rotation-aware
+key cache per provider. There is no issuer-validation bypass.
+
+`organizations` excludes personal Microsoft accounts. `common` can authenticate
+personal accounts, but does not grant them platform membership or bypass any
+admission checks. Tenant-specific issuers and other OIDC providers retain the
+strict standard OIDC implementation. Sovereign-cloud multi-tenant authorities
+are not implemented by this adapter.
+
+Configure each platform tenant's domain, `azure.tid` checks and explicit auto-add
+policy separately. A successful Microsoft sign-in is not admission to a tenant.
+Existing administrator-created member overrides still apply only to that exact
+membership; auto-add cannot create an override. No additional Microsoft API
+permissions are needed for this issuer handling.
+
+Existing sessions and their expiration are unchanged. Login attempts already in
+flight when upgrading to nonce-bound callbacks may need to restart sign-in.
+Deploy the updated auth-go binary before selecting a multi-tenant authority;
+older strict-discovery builds reject Microsoft's issuer template at startup.
+See [Microsoft's OIDC documentation](https://learn.microsoft.com/en-us/entra/identity-platform/v2-protocols-oidc)
+and [tenant-independent issuer and signing-key validation](https://learn.microsoft.com/en-us/entra/identity-platform/access-tokens#validate-the-issuer).
+
+The default OIDC implementation supports configured standards-based providers.
 Names correspond exactly to tenant policy keys. The structured editor handles
 multiple `azure.tid` and `google.hd` values; other provider/claim names use the JSON
 editor. Google hosted-domain options can include an explicit blank option for

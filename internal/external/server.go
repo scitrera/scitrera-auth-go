@@ -31,6 +31,7 @@ import (
 	pkgauthproxy "github.com/scitrera/aether/server/pkg/authproxy"
 	"github.com/scitrera/aether/server/pkg/authproxy/login"
 
+	"github.com/scitrera/scitrera-auth-go/internal/loginproviders"
 	"github.com/scitrera/scitrera-auth-go/internal/observability"
 )
 
@@ -141,6 +142,7 @@ func New(opts Options) (*Server, error) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
+	loginCfg.ProviderFactory = loginproviders.New
 	reg, err := loginCfg.BuildRegistry(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("external: build provider registry: %w", err)

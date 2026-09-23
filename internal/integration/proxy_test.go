@@ -28,6 +28,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/scitrera/aether/server/pkg/authproxy"
 	"github.com/scitrera/scitrera-auth-go/internal/external"
+	"github.com/scitrera/scitrera-auth-go/internal/loginproviders"
 	"github.com/scitrera/scitrera-auth-go/internal/mtdb/msgpack"
 	"github.com/scitrera/scitrera-auth-go/internal/resolver"
 	"github.com/scitrera/scitrera-auth-go/internal/testdb"
@@ -133,16 +134,16 @@ func TestSyntheticOIDCLoginTenantGateAndProxy(t *testing.T) {
 		if autoAdd {
 			name = "automatic_enrollment"
 		}
-		t.Run(name, func(t *testing.T) { syntheticOIDC(t, autoAdd, false) })
+		t.Run(name, func(t *testing.T) { syntheticOIDC(t, autoAdd, false, nil) })
 	}
 }
 func TestRedisOIDCSessionRevocation(t *testing.T) {
 	if os.Getenv("AUTH_TEST_REDIS_ADDR") == "" {
 		t.Skip("set AUTH_TEST_REDIS_ADDR")
 	}
-	syntheticOIDC(t, false, true)
+	syntheticOIDC(t, false, true, nil)
 }
-func syntheticOIDC(t *testing.T, autoAdd, useRedis bool) {
+func syntheticOIDC(t *testing.T, autoAdd, useRedis bool, account *organizationAccount) {
 	repo, dsn := testdb.New(t)
 	if err := repo.Migrate(context.Background()); err != nil {
 		t.Fatal(err)
@@ -172,22 +173,37 @@ func syntheticOIDC(t *testing.T, autoAdd, useRedis bool) {
 	}
 	issuer := httptest.NewServer(nil)
 	defer issuer.Close()
+	discoveryIssuer, tokenIssuer := issuer.URL, issuer.URL
+	authURL, tokenURL, keysURL := issuer.URL+"/authorize", issuer.URL+"/token", issuer.URL+"/jwks"
+	email, tid := "person@example.com", "11111111-1111-4111-8111-111111111111"
+	if account != nil {
+		mockMicrosoftTransport(t, issuer.URL)
+		discoveryIssuer = microsoftAuthority
+		tokenIssuer = microsoftHost + "/" + account.tid + "/v2.0"
+		authURL, tokenURL, keysURL = microsoftHost+"/organizations/oauth2/v2.0/authorize", microsoftHost+"/organizations/oauth2/v2.0/token", microsoftHost+"/organizations/discovery/v2.0/keys"
+		email, tid = account.email, account.tid
+	}
 	issuer.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		switch r.URL.Path {
-		case "/.well-known/openid-configuration":
-			json.NewEncoder(w).Encode(map[string]any{"issuer": issuer.URL, "authorization_endpoint": issuer.URL + "/authorize", "token_endpoint": issuer.URL + "/token", "jwks_uri": issuer.URL + "/jwks", "response_types_supported": []string{"code"}, "subject_types_supported": []string{"public"}, "id_token_signing_alg_values_supported": []string{"RS256"}})
-		case "/jwks":
-			json.NewEncoder(w).Encode(map[string]any{"keys": []any{map[string]any{"kty": "RSA", "kid": "synthetic", "alg": "RS256", "use": "sig", "n": base64.RawURLEncoding.EncodeToString(key.N.Bytes()), "e": base64.RawURLEncoding.EncodeToString(big.NewInt(int64(key.E)).Bytes())}}})
-		case "/authorize":
+		case "/.well-known/openid-configuration", "/organizations/v2.0/.well-known/openid-configuration":
+			metadataIssuer := discoveryIssuer
+			if account != nil {
+				metadataIssuer = microsoftHost + "/{tenantid}/v2.0"
+			}
+			json.NewEncoder(w).Encode(map[string]any{"issuer": metadataIssuer, "authorization_endpoint": authURL, "token_endpoint": tokenURL, "jwks_uri": keysURL, "response_types_supported": []string{"code"}, "subject_types_supported": []string{"public"}, "id_token_signing_alg_values_supported": []string{"RS256"}})
+		case "/jwks", "/organizations/discovery/v2.0/keys":
+			json.NewEncoder(w).Encode(map[string]any{"keys": []any{map[string]any{"issuer": microsoftHost + "/{tenantid}/v2.0", "kty": "RSA", "kid": "synthetic", "alg": "RS256", "use": "sig", "n": base64.RawURLEncoding.EncodeToString(key.N.Bytes()), "e": base64.RawURLEncoding.EncodeToString(big.NewInt(int64(key.E)).Bytes())}}})
+		case "/authorize", "/organizations/oauth2/v2.0/authorize":
 			target, _ := url.Parse(r.URL.Query().Get("redirect_uri"))
 			q := target.Query()
 			q.Set("state", r.URL.Query().Get("state"))
-			q.Set("code", "synthetic-code")
+			q.Set("code", r.URL.Query().Get("nonce"))
 			target.RawQuery = q.Encode()
 			http.Redirect(w, r, target.String(), 302)
-		case "/token":
-			token := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims{"iss": issuer.URL, "aud": "synthetic-client", "sub": "synthetic-person", "email": "person@example.com", "email_verified": true, "name": "Synthetic Person", "tid": "11111111-1111-4111-8111-111111111111", "iat": time.Now().Unix(), "exp": time.Now().Add(time.Hour).Unix()})
+		case "/token", "/organizations/oauth2/v2.0/token":
+			r.ParseForm()
+			token := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims{"nonce": r.Form.Get("code"), "iss": tokenIssuer, "aud": "synthetic-client", "sub": "synthetic-person", "email": email, "email_verified": true, "name": "Synthetic Person", "tid": tid, "iat": time.Now().Unix(), "exp": time.Now().Add(time.Hour).Unix()})
 			token.Header["kid"] = "synthetic"
 			signed, _ := token.SignedString(key)
 			json.NewEncoder(w).Encode(map[string]any{"access_token": "synthetic-access", "token_type": "Bearer", "expires_in": 3600, "id_token": signed})
@@ -196,7 +212,7 @@ func syntheticOIDC(t *testing.T, autoAdd, useRedis bool) {
 		}
 	})
 	externalAddr, internalAddr := freeAddr(t), freeAddr(t)
-	for k, v := range map[string]string{"AUTH_PROXY_LOGIN_PROVIDERS": "azure", "AUTH_PROXY_LOGIN_AZURE_ISSUER": issuer.URL, "AUTH_PROXY_LOGIN_AZURE_CLIENT_ID": "synthetic-client", "AUTH_PROXY_LOGIN_AZURE_CLIENT_SECRET": "synthetic-secret", "AUTH_PROXY_LOGIN_AZURE_REDIRECT_URL": "http://" + externalAddr + "/auth/callback/azure", "AUTH_PROXY_SESSION_STORE": "jwt", "AUTH_PROXY_SESSION_JWT_SIGNING_KEY": strings.Repeat("synthetic-key-", 3), "AUTH_PROXY_SESSION_COOKIE_SECURE": "false", "AUTH_PROXY_SESSION_COOKIE_NAME": "auth_test_session", "AUTH_PROXY_SESSION_COOKIE_DOMAIN": ""} {
+	for k, v := range map[string]string{"AUTH_PROXY_LOGIN_PROVIDERS": "azure", "AUTH_PROXY_LOGIN_AZURE_ISSUER": discoveryIssuer, "AUTH_PROXY_LOGIN_AZURE_CLIENT_ID": "synthetic-client", "AUTH_PROXY_LOGIN_AZURE_CLIENT_SECRET": "synthetic-secret", "AUTH_PROXY_LOGIN_AZURE_REDIRECT_URL": "http://" + externalAddr + "/auth/callback/azure", "AUTH_PROXY_SESSION_STORE": "jwt", "AUTH_PROXY_SESSION_JWT_SIGNING_KEY": strings.Repeat("synthetic-key-", 3), "AUTH_PROXY_SESSION_COOKIE_SECURE": "false", "AUTH_PROXY_SESSION_COOKIE_NAME": "auth_test_session", "AUTH_PROXY_SESSION_COOKIE_DOMAIN": ""} {
 		t.Setenv(k, v)
 	}
 	var manager *login.RedisOpaqueSessionStore
@@ -249,7 +265,9 @@ func syntheticOIDC(t *testing.T, autoAdd, useRedis bool) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	go func() { done <- authproxy.Run(ctx, cfg, authproxy.WithIdentityResolver(mtResolver)) }()
+	go func() {
+		done <- authproxy.Run(ctx, cfg, authproxy.WithIdentityResolver(mtResolver), authproxy.WithLoginProviderFactory(loginproviders.New))
+	}()
 	frontDone := make(chan error, 1)
 	go func() { frontDone <- front.Start() }()
 	t.Cleanup(func() {
@@ -288,6 +306,17 @@ func syntheticOIDC(t *testing.T, autoAdd, useRedis bool) {
 	}
 	response.Body.Close()
 	response = get(intURL + "/auth/verify?workspace_id=auth-app&tenant_id=alpha")
+	if account != nil && !account.allow {
+		defer response.Body.Close()
+		if response.StatusCode != 401 && response.StatusCode != 403 {
+			t.Fatalf("unapproved organization/domain admitted: %s", response.Status)
+		}
+		var count int
+		if err := repo.DB().QueryRow("SELECT count(*) FROM public.user_tenants").Scan(&count); err != nil || count != 0 {
+			t.Fatalf("denied login created membership: count=%d err=%v", count, err)
+		}
+		return
+	}
 	if response.StatusCode != 200 || response.Header.Get("X-Scitrera-Default-Tenant") != "alpha" {
 		body, _ := io.ReadAll(response.Body)
 		t.Fatalf("verify %s %s", response.Status, body)

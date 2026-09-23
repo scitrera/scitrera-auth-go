@@ -51,7 +51,7 @@ retain their own licenses; consult the pinned images' system documentation.
 | `github.com/prometheus/procfs` | `v0.20.1` | [LICENSE](LICENSES/third-party/github.com_prometheus_procfs@v0.20.1/LICENSE), [NOTICE](LICENSES/third-party/github.com_prometheus_procfs@v0.20.1/NOTICE) |
 | `github.com/redis/go-redis/v9` | `v9.17.2` | [LICENSE](LICENSES/third-party/github.com_redis_go-redis_v9@v9.17.2/LICENSE) |
 | `github.com/rs/zerolog` | `v1.34.0` | [LICENSE](LICENSES/third-party/github.com_rs_zerolog@v1.34.0/LICENSE) |
-| `github.com/scitrera/aether/server` | `v0.2.4` | [LICENSE](LICENSES/third-party/github.com_scitrera_aether_server@v0.2.4/LICENSE) |
+| `github.com/scitrera/aether/server` | `v0.2.5-0.20260923202941-e4bcd2e2ff0a` | [LICENSE](LICENSES/third-party/github.com_scitrera_aether_server@v0.2.5-0.20260923202941-e4bcd2e2ff0a/LICENSE) |
 | `github.com/vmihailenco/msgpack/v5` | `v5.4.1` | [LICENSE](LICENSES/third-party/github.com_vmihailenco_msgpack_v5@v5.4.1/LICENSE) |
 | `github.com/vmihailenco/tagparser/v2` | `v2.0.0` | [LICENSE](LICENSES/third-party/github.com_vmihailenco_tagparser_v2@v2.0.0/LICENSE) |
 | `go.opentelemetry.io/auto/sdk` | `v1.2.1` | [LICENSE](LICENSES/third-party/go.opentelemetry.io_auto_sdk@v1.2.1/LICENSE) |
@@ -71,16 +71,16 @@ retain their own licenses; consult the pinned images' system documentation.
 | `go.opentelemetry.io/otel/trace` | `v1.44.0` | [LICENSE](LICENSES/third-party/go.opentelemetry.io_otel_trace@v1.44.0/LICENSE) |
 | `go.opentelemetry.io/proto/otlp` | `v1.10.0` | [LICENSE](LICENSES/third-party/go.opentelemetry.io_proto_otlp@v1.10.0/LICENSE) |
 | `go.yaml.in/yaml/v2` | `v2.4.4` | [LICENSE](LICENSES/third-party/go.yaml.in_yaml_v2@v2.4.4/LICENSE), [LICENSE.libyaml](LICENSES/third-party/go.yaml.in_yaml_v2@v2.4.4/LICENSE.libyaml), [NOTICE](LICENSES/third-party/go.yaml.in_yaml_v2@v2.4.4/NOTICE) |
-| `golang.org/x/crypto` | `v0.51.0` | [LICENSE](LICENSES/third-party/golang.org_x_crypto@v0.51.0/LICENSE), [PATENTS](LICENSES/third-party/golang.org_x_crypto@v0.51.0/PATENTS) |
-| `golang.org/x/net` | `v0.55.0` | [LICENSE](LICENSES/third-party/golang.org_x_net@v0.55.0/LICENSE), [PATENTS](LICENSES/third-party/golang.org_x_net@v0.55.0/PATENTS) |
+| `golang.org/x/crypto` | `v0.55.0` | [LICENSE](LICENSES/third-party/golang.org_x_crypto@v0.55.0/LICENSE), [PATENTS](LICENSES/third-party/golang.org_x_crypto@v0.55.0/PATENTS) |
+| `golang.org/x/net` | `v0.58.0` | [LICENSE](LICENSES/third-party/golang.org_x_net@v0.58.0/LICENSE), [PATENTS](LICENSES/third-party/golang.org_x_net@v0.58.0/PATENTS) |
 | `golang.org/x/oauth2` | `v0.36.0` | [LICENSE](LICENSES/third-party/golang.org_x_oauth2@v0.36.0/LICENSE) |
-| `golang.org/x/sync` | `v0.21.0` | [LICENSE](LICENSES/third-party/golang.org_x_sync@v0.21.0/LICENSE), [PATENTS](LICENSES/third-party/golang.org_x_sync@v0.21.0/PATENTS) |
-| `golang.org/x/sys` | `v0.45.0` | [LICENSE](LICENSES/third-party/golang.org_x_sys@v0.45.0/LICENSE), [PATENTS](LICENSES/third-party/golang.org_x_sys@v0.45.0/PATENTS) |
-| `golang.org/x/text` | `v0.39.0` | [LICENSE](LICENSES/third-party/golang.org_x_text@v0.39.0/LICENSE), [PATENTS](LICENSES/third-party/golang.org_x_text@v0.39.0/PATENTS) |
+| `golang.org/x/sync` | `v0.22.0` | [LICENSE](LICENSES/third-party/golang.org_x_sync@v0.22.0/LICENSE), [PATENTS](LICENSES/third-party/golang.org_x_sync@v0.22.0/PATENTS) |
+| `golang.org/x/sys` | `v0.47.0` | [LICENSE](LICENSES/third-party/golang.org_x_sys@v0.47.0/LICENSE), [PATENTS](LICENSES/third-party/golang.org_x_sys@v0.47.0/PATENTS) |
+| `golang.org/x/text` | `v0.41.0` | [LICENSE](LICENSES/third-party/golang.org_x_text@v0.41.0/LICENSE), [PATENTS](LICENSES/third-party/golang.org_x_text@v0.41.0/PATENTS) |
 | `golang.org/x/time` | `v0.15.0` | [LICENSE](LICENSES/third-party/golang.org_x_time@v0.15.0/LICENSE), [PATENTS](LICENSES/third-party/golang.org_x_time@v0.15.0/PATENTS) |
 | `google.golang.org/genproto/googleapis/api` | `v0.0.0-20260526163538-3dc84a4a5aaa` | [LICENSE](LICENSES/third-party/google.golang.org_genproto_googleapis_api@v0.0.0-20260526163538-3dc84a4a5aaa/LICENSE) |
 | `google.golang.org/genproto/googleapis/rpc` | `v0.0.0-20260526163538-3dc84a4a5aaa` | [LICENSE](LICENSES/third-party/google.golang.org_genproto_googleapis_rpc@v0.0.0-20260526163538-3dc84a4a5aaa/LICENSE) |
-| `google.golang.org/grpc` | `v1.82.1` | [LICENSE](LICENSES/third-party/google.golang.org_grpc@v1.82.1/LICENSE), [NOTICE.txt](LICENSES/third-party/google.golang.org_grpc@v1.82.1/NOTICE.txt) |
+| `google.golang.org/grpc` | `v1.83.2` | [LICENSE](LICENSES/third-party/google.golang.org_grpc@v1.83.2/LICENSE), [NOTICE.txt](LICENSES/third-party/google.golang.org_grpc@v1.83.2/NOTICE.txt) |
 | `google.golang.org/protobuf` | `v1.36.11` | [LICENSE](LICENSES/third-party/google.golang.org_protobuf@v1.36.11/LICENSE), [PATENTS](LICENSES/third-party/google.golang.org_protobuf@v1.36.11/PATENTS) |
 | `gopkg.in/yaml.v3` | `v3.0.1` | [LICENSE](LICENSES/third-party/gopkg.in_yaml.v3@v3.0.1/LICENSE), [NOTICE](LICENSES/third-party/gopkg.in_yaml.v3@v3.0.1/NOTICE) |
 | `npm:@babel/code-frame` | `7.29.7` | [LICENSE](LICENSES/third-party/npm_@babel_code-frame@7.29.7/LICENSE) |
